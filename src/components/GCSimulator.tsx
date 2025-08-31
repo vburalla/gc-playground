@@ -84,7 +84,7 @@ export const GCSimulator = () => {
     setHeap(prev => {
       const newHeap = [...prev];
       newHeap.forEach(cell => {
-        if (cell.state === CellState.REFERENCED) {
+        if (cell.state === CellState.REFERENCED || cell.survivedCycles > 0) {
           cell.state = CellState.MARKED;
         }
       });
