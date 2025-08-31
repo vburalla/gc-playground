@@ -18,15 +18,14 @@ export interface MemoryCell {
   id: number;
 }
 
-const GRID_SIZE = 15;
-const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
-
 export const GCSimulator = () => {
   const [heap, setHeap] = useState<MemoryCell[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [gcCycles, setGcCycles] = useState(0);
   const [phase, setPhase] = useState<'allocating' | 'marking' | 'sweeping' | 'complete'>('allocating');
+  const [gridSize, setGridSize] = useState(15);
+  const [speed, setSpeed] = useState(1000); // milliseconds
 
   // Initialize heap
   useEffect(() => {
@@ -34,8 +33,9 @@ export const GCSimulator = () => {
   }, []);
 
   const initializeHeap = () => {
+    const totalCells = gridSize * gridSize;
     const newHeap: MemoryCell[] = [];
-    for (let i = 0; i < TOTAL_CELLS; i++) {
+    for (let i = 0; i < totalCells; i++) {
       newHeap.push({
         state: CellState.FREE,
         survivedCycles: 0,
@@ -153,10 +153,17 @@ export const GCSimulator = () => {
   // Auto-step when running
   useEffect(() => {
     if (isRunning && phase !== 'complete') {
-      const timer = setTimeout(nextStep, 1000);
+      const timer = setTimeout(nextStep, speed);
       return () => clearTimeout(timer);
     }
-  }, [isRunning, currentStep, phase]);
+  }, [isRunning, currentStep, phase, speed]);
+
+  // Reinitialize heap when grid size changes
+  useEffect(() => {
+    if (!isRunning) {
+      initializeHeap();
+    }
+  }, [gridSize]);
 
   const getCellClassName = (cell: MemoryCell) => {
     switch (cell.state) {
@@ -190,10 +197,44 @@ export const GCSimulator = () => {
               <CardTitle>Controles</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Paso: {currentStep}</p>
-                <p className="text-sm text-muted-foreground">Ciclos GC: {gcCycles}</p>
-                <p className="text-sm text-muted-foreground">Fase: {phase}</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Tamaño de Memoria</label>
+                  <select 
+                    value={gridSize} 
+                    onChange={(e) => setGridSize(Number(e.target.value))}
+                    disabled={isRunning}
+                    className="w-full p-2 rounded border bg-background text-foreground"
+                  >
+                    <option value={10}>10x10 (100 celdas)</option>
+                    <option value={12}>12x12 (144 celdas)</option>
+                    <option value={15}>15x15 (225 celdas)</option>
+                    <option value={18}>18x18 (324 celdas)</option>
+                    <option value={20}>20x20 (400 celdas)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Velocidad</label>
+                  <select 
+                    value={speed} 
+                    onChange={(e) => setSpeed(Number(e.target.value))}
+                    className="w-full p-2 rounded border bg-background text-foreground"
+                  >
+                    <option value={500}>Muy Rápida (0.5s)</option>
+                    <option value={1000}>Rápida (1s)</option>
+                    <option value={1500}>Normal (1.5s)</option>
+                    <option value={2000}>Lenta (2s)</option>
+                    <option value={3000}>Muy Lenta (3s)</option>
+                  </select>
+                </div>
+
+                <div className="pt-2 border-t space-y-1">
+                  <p className="text-sm text-muted-foreground">Paso: {currentStep}</p>
+                  <p className="text-sm text-muted-foreground">Ciclos GC: {gcCycles}</p>
+                  <p className="text-sm text-muted-foreground">Fase: {phase}</p>
+                  <p className="text-sm text-muted-foreground">Celdas: {gridSize}x{gridSize}</p>
+                </div>
               </div>
               
               <div className="space-y-2">
@@ -249,14 +290,23 @@ export const GCSimulator = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-15 gap-1 max-w-2xl mx-auto">
+                <div 
+                  className="grid gap-1 max-w-4xl mx-auto"
+                  style={{ 
+                    gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
+                    maxWidth: gridSize > 15 ? '48rem' : '32rem'
+                  }}
+                >
                   {heap.map((cell) => (
                     <div
                       key={cell.id}
                       className={`
-                        aspect-square border-2 rounded flex items-center justify-center text-xs font-bold
+                        aspect-square border-2 rounded flex items-center justify-center font-bold
                         transition-all duration-300 ${getCellClassName(cell)}
                       `}
+                      style={{ 
+                        fontSize: gridSize > 18 ? '0.625rem' : gridSize > 15 ? '0.75rem' : '0.875rem'
+                      }}
                     >
                       {cell.state === CellState.SURVIVED && cell.survivedCycles > 0 
                         ? cell.survivedCycles 
