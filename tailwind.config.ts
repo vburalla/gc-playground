@@ -18,6 +18,9 @@ export default {
 			}
 		},
 		extend: {
+			gridTemplateColumns: {
+				'15': 'repeat(15, minmax(0, 1fr))',
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -61,7 +64,22 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				gc: {
+					'free-cell': 'hsl(var(--gc-free-cell))',
+					'free-cell-foreground': 'hsl(var(--gc-free-cell-foreground))',
+					'referenced-cell': 'hsl(var(--gc-referenced-cell))',
+					'referenced-cell-foreground': 'hsl(var(--gc-referenced-cell-foreground))',
+					'dereferenced-cell': 'hsl(var(--gc-dereferenced-cell))',
+					'dereferenced-cell-foreground': 'hsl(var(--gc-dereferenced-cell-foreground))',
+					'marked-cell': 'hsl(var(--gc-marked-cell))',
+					'marked-cell-foreground': 'hsl(var(--gc-marked-cell-foreground))',
+					'survived-cell': 'hsl(var(--gc-survived-cell))',
+					'survived-cell-foreground': 'hsl(var(--gc-survived-cell-foreground))'
 				}
+			},
+			backgroundImage: {
+				'gradient-bg': 'var(--gradient-bg)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
