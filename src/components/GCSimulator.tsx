@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Play, Pause, RotateCcw, SkipForward } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "sonner";
+import { AppSidebar } from "./AppSidebar";
 
 export enum CellState {
   FREE = "free",
@@ -183,178 +183,68 @@ export const GCSimulator = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-bg p-6">
-      <div className="max-w-7xl mx-auto">
-        <header className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">NON MOVING COLLECTOR</h1>
-          <p className="text-xl text-muted-foreground">Demo</p>
+    <>
+      <AppSidebar
+        gridSize={gridSize}
+        setGridSize={setGridSize}
+        speed={speed}
+        setSpeed={setSpeed}
+        currentStep={currentStep}
+        gcCycles={gcCycles}
+        phase={phase}
+        isRunning={isRunning}
+        onToggleSimulation={toggleSimulation}
+        onNextStep={nextStep}
+        onReset={initializeHeap}
+      />
+
+      <main className="flex-1 bg-gradient-bg">
+        {/* Header with Sidebar Trigger */}
+        <header className="h-16 flex items-center border-b border-border bg-card/50 backdrop-blur-sm">
+          <SidebarTrigger className="ml-4" />
+          <div className="flex-1 text-center">
+            <h1 className="text-2xl font-bold text-foreground">NON MOVING COLLECTOR</h1>
+            <p className="text-sm text-muted-foreground">Demo</p>
+          </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Control Panel */}
-          <Card className="lg:col-span-1">
+        {/* Main Content */}
+        <div className="p-6 h-[calc(100vh-4rem)] flex items-center justify-center">
+          <Card className="w-full max-w-5xl">
             <CardHeader>
-              <CardTitle>Controles</CardTitle>
+              <CardTitle className="text-center text-xl">
+                {phase === 'allocating' ? 'Allocating' : 'Heap'}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Tamaño de Memoria</label>
-                  <select 
-                    value={gridSize} 
-                    onChange={(e) => setGridSize(Number(e.target.value))}
-                    disabled={isRunning}
-                    className="w-full p-2 rounded border bg-background text-foreground"
+            <CardContent className="flex justify-center">
+              <div 
+                className="grid gap-1 w-full max-w-4xl"
+                style={{ 
+                  gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
+                }}
+              >
+                {heap.map((cell) => (
+                  <div
+                    key={cell.id}
+                    className={`
+                      aspect-square border-2 rounded flex items-center justify-center font-bold
+                      transition-all duration-300 ${getCellClassName(cell)}
+                    `}
+                    style={{ 
+                      fontSize: gridSize > 18 ? '0.625rem' : gridSize > 15 ? '0.75rem' : '0.875rem'
+                    }}
                   >
-                    <option value={10}>10x10 (100 celdas)</option>
-                    <option value={12}>12x12 (144 celdas)</option>
-                    <option value={15}>15x15 (225 celdas)</option>
-                    <option value={18}>18x18 (324 celdas)</option>
-                    <option value={20}>20x20 (400 celdas)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Velocidad</label>
-                  <select 
-                    value={speed} 
-                    onChange={(e) => setSpeed(Number(e.target.value))}
-                    className="w-full p-2 rounded border bg-background text-foreground"
-                  >
-                    <option value={500}>Muy Rápida (0.5s)</option>
-                    <option value={1000}>Rápida (1s)</option>
-                    <option value={1500}>Normal (1.5s)</option>
-                    <option value={2000}>Lenta (2s)</option>
-                    <option value={3000}>Muy Lenta (3s)</option>
-                  </select>
-                </div>
-
-                <div className="pt-2 border-t space-y-1">
-                  <p className="text-sm text-muted-foreground">Paso: {currentStep}</p>
-                  <p className="text-sm text-muted-foreground">Ciclos GC: {gcCycles}</p>
-                  <p className="text-sm text-muted-foreground">Fase: {phase}</p>
-                  <p className="text-sm text-muted-foreground">Celdas: {gridSize}x{gridSize}</p>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Button 
-                  onClick={toggleSimulation}
-                  className="w-full"
-                  variant={isRunning ? "secondary" : "default"}
-                >
-                  {isRunning ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
-                  {phase === 'complete' ? 'Reiniciar' : isRunning ? 'Pausar' : 'Iniciar'}
-                </Button>
-                
-                <Button 
-                  onClick={nextStep}
-                  disabled={isRunning || phase === 'complete'}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  Siguiente Paso
-                </Button>
-                
-                <Button 
-                  onClick={initializeHeap}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Reiniciar
-                </Button>
-              </div>
-
-              <div className="pt-4 border-t">
-                <h4 className="font-semibold mb-3">Proceso:</h4>
-                <ol className="text-sm space-y-1 text-muted-foreground">
-                  <li>1. Mutator allocates cells in Heap</li>
-                  <li>2. Heap is out of memory → GC</li>
-                  <li>3. Mark all live cells</li>
-                  <li>4. Free all dead cells</li>
-                  <li>5. Unmark all live cells</li>
-                  <li>6. Resume Mutator</li>
-                </ol>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Memory Grid */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-center">
-                  {phase === 'allocating' ? 'Allocating' : 'Heap'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div 
-                  className="grid gap-1 max-w-4xl mx-auto"
-                  style={{ 
-                    gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
-                    maxWidth: gridSize > 15 ? '48rem' : '32rem'
-                  }}
-                >
-                  {heap.map((cell) => (
-                    <div
-                      key={cell.id}
-                      className={`
-                        aspect-square border-2 rounded flex items-center justify-center font-bold
-                        transition-all duration-300 ${getCellClassName(cell)}
-                      `}
-                      style={{ 
-                        fontSize: gridSize > 18 ? '0.625rem' : gridSize > 15 ? '0.75rem' : '0.875rem'
-                      }}
-                    >
-                      {cell.state === CellState.SURVIVED && cell.survivedCycles > 0 
-                        ? cell.survivedCycles 
-                        : ''
-                      }
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Legend */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle>Leyenda</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-gc-free-cell border-2 border-border rounded"></div>
-                <span className="text-sm">Free Cell</span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-gc-referenced-cell border-2 border-gc-referenced-cell rounded"></div>
-                <span className="text-sm">Referenced Cell</span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-gc-dereferenced-cell border-2 border-gc-dereferenced-cell rounded"></div>
-                <span className="text-sm">Dereferenced Cell</span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-gc-marked-cell border-2 border-gc-marked-cell rounded"></div>
-                <span className="text-sm">Marked Cell</span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-gc-survived-cell border-2 border-gc-survived-cell rounded flex items-center justify-center text-xs font-bold text-gc-survived-cell-foreground">
-                  1
-                </div>
-                <span className="text-sm">Referenced Cell (survived 1 GC)</span>
+                    {cell.state === CellState.SURVIVED && cell.survivedCycles > 0 
+                      ? cell.survivedCycles 
+                      : ''
+                    }
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
         </div>
-      </div>
-    </div>
+      </main>
+    </>
   );
 };
