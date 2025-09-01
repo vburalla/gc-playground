@@ -46,8 +46,8 @@ All colors MUST be HSL.
     --gc-referenced-cell-foreground: 0 0% 100%;
     --gc-dereferenced-cell: 271 76% 53%;
     --gc-dereferenced-cell-foreground: 0 0% 100%;
-    --gc-marked-cell: 213 94% 68%;
-    --gc-marked-cell-foreground: 0 0% 100%;
+    --gc-marked-cell: 120 60% 70%;
+    --gc-marked-cell-foreground: 120 60% 20%;
     --gc-survived-cell: 217 91% 60%;
     --gc-survived-cell-foreground: 0 0% 100%;
 
