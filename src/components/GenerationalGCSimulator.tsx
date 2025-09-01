@@ -254,39 +254,40 @@ export const GenerationalGCSimulator = () => {
     setCurrentStep(prev => prev + 1);
 
     if (phase === 'allocating') {
-      const activeSpaceFull = heap.filter(cell => 
+      const edenHasSpace = heap.filter(cell => 
         cell.space === 'eden' && cell.state === CellState.FREE
-      ).length < 3;
+      ).length >= 3;
 
-      if (activeSpaceFull) {
-        setPhase('marking');
-        setGcCycles(prev => prev + 1);
-        toast.info(`Iniciando ciclo GC #${gcCycles + 1} - Fase de marcado`);
-      } else {
+      if (edenHasSpace) {
         simulateAllocation();
+      } else {
+        // Swap Survivor ACTIVE space BEFORE marking (requested behavior)
+        setActiveSurvivorSpace(prev => (prev === 'survivor-from' ? 'survivor-to' : 'survivor-from'));
+        setGcCycles(prev => prev + 1);
+        toast.info(`Iniciando ciclo GC #${gcCycles + 1}: swap de Survivor y fase de marcado`);
+        setPhase('marking');
       }
     } else if (phase === 'marking') {
       simulateMarkPhase();
-      // Add pause after marking to appreciate marked cells
+      // Pause to visualize MARKED cells
       setTimeout(() => {
         setPhase('copying-survivor');
-        toast.info("Copiando objetos vivos de Eden a Survivor");
+        toast.info("Copiando vivos de Eden → Survivor ACTIVO");
       }, 1500);
     } else if (phase === 'copying-survivor') {
       simulateCopyToSurvivor();
       setTimeout(() => {
         setPhase('copying-tenured');
-        toast.info("Procesando objetos en Survivor");
+        toast.info("Copiando vivos de Survivor INACTIVO → ACTIVO / Promociones");
       }, 800);
     } else if (phase === 'copying-tenured') {
       simulateCopyBetweenSurvivors();
       setTimeout(() => {
         setPhase('swapping');
-        toast.info("Finalizando copia y cambiando espacios");
+        toast.info("Finalizando copia y limpieza");
       }, 800);
     } else if (phase === 'swapping') {
       finalizeCopyPhase();
-      setActiveSurvivorSpace(prev => prev === 'survivor-from' ? 'survivor-to' : 'survivor-from');
       setPhase('allocating');
       toast.success(`Ciclo GC #${gcCycles} completado`);
     }
