@@ -124,10 +124,10 @@ export const GenerationalGCSimulator = () => {
   const simulateMarkPhase = () => {
     setHeap(prev => {
       const newHeap = [...prev];
-      // Randomly dereference some tenured objects to show deallocation
+      // Randomly dereference some objects in survivor and tenured spaces to show deallocation
       newHeap.forEach(cell => {
-        if (cell.space === 'tenured' && cell.state === CellState.SURVIVED) {
-          if (Math.random() < 0.1) {
+        if ((cell.space === 'survivor-from' || cell.space === 'survivor-to' || cell.space === 'tenured') && cell.state === CellState.SURVIVED) {
+          if (Math.random() < 0.15) { // 15% chance of deallocation
             cell.state = CellState.DEREFERENCED;
             cell.survivedCycles = 0;
           }
