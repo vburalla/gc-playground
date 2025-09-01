@@ -124,10 +124,17 @@ export const GenerationalGCSimulator = () => {
   const simulateMarkPhase = () => {
     setHeap(prev => {
       const newHeap = [...prev];
-      // Randomly dereference some objects in survivor and tenured spaces to show deallocation
+      // Randomly dereference some objects in survivor spaces (NOT tenured - they accumulate)
       newHeap.forEach(cell => {
-        if ((cell.space === 'survivor-from' || cell.space === 'survivor-to' || cell.space === 'tenured') && cell.state === CellState.SURVIVED) {
-          if (Math.random() < 0.15) { // 15% chance of deallocation
+        if ((cell.space === 'survivor-from' || cell.space === 'survivor-to') && cell.state === CellState.SURVIVED) {
+          if (Math.random() < 0.15) { // 15% chance of deallocation in survivor
+            cell.state = CellState.DEREFERENCED;
+            cell.survivedCycles = 0;
+          }
+        }
+        // Tenured objects can also become garbage, but they accumulate until Major GC
+        if (cell.space === 'tenured' && cell.state === CellState.SURVIVED) {
+          if (Math.random() < 0.1) { // 10% chance in tenured - they will accumulate
             cell.state = CellState.DEREFERENCED;
             cell.survivedCycles = 0;
           }
@@ -243,7 +250,7 @@ export const GenerationalGCSimulator = () => {
           // Clean deallocated positions each cycle in Survivor spaces only
           cell.state = CellState.FREE;
         }
-        // NOTE: Tenured deallocated cells are NOT cleaned here - they accumulate until Major GC
+        // IMPORTANT: Tenured DEREFERENCED cells are NOT cleaned here - they accumulate until Major GC
       });
       return newHeap;
     });
@@ -252,15 +259,14 @@ export const GenerationalGCSimulator = () => {
   const simulateMajorGCMarking = () => {
     setHeap(prev => {
       const newHeap = [...prev];
-      // Mark live objects in Tenured space
+      // Mark live objects in Tenured space during Major GC
       newHeap.forEach(cell => {
-        if (cell.space === 'tenured' && cell.state === CellState.SURVIVED) {
-          // Randomly dereference some tenured to simulate garbage
-          if (Math.random() < 0.2) {
-            cell.state = CellState.DEREFERENCED;
-          } else {
+        if (cell.space === 'tenured') {
+          if (cell.state === CellState.SURVIVED) {
+            // Mark live objects
             cell.state = CellState.MARKED;
           }
+          // DEREFERENCED cells remain as DEREFERENCED (garbage to be collected)
         }
       });
       return newHeap;
@@ -273,7 +279,7 @@ export const GenerationalGCSimulator = () => {
       const tenuredCells = newHeap.filter(cell => cell.space === 'tenured');
       const markedTenured = tenuredCells.filter(cell => cell.state === CellState.MARKED);
       
-      // Clear all tenured space first
+      // Clear all tenured space first (this frees both SURVIVED and DEREFERENCED)
       tenuredCells.forEach(cell => {
         cell.state = CellState.FREE;
         cell.survivedCycles = 0;
@@ -315,8 +321,8 @@ export const GenerationalGCSimulator = () => {
         ).length;
         
         if (tenuredFreeSpace === 0) {
-          // Tenured is full - trigger Major GC
-          toast.info(`Major GC iniciado - Tenured Space lleno`);
+          // Tenured is full - trigger Major GC (deallocated cells have accumulated)
+          toast.info(`Major GC iniciado - Tenured Space lleno (celdas deallocated acumuladas)`);
           setPhase('major-gc-marking');
           return;
         }
