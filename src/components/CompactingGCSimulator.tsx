@@ -9,23 +9,25 @@ export enum CellState {
   REFERENCED = "referenced", 
   DEREFERENCED = "dereferenced",
   MARKED = "marked",
-  SURVIVED = "survived"
+  SURVIVED = "survived",
+  COMPACTING = "compacting"
 }
 
 export interface MemoryCell {
   state: CellState;
   survivedCycles: number;
   id: number;
+  originalId?: number; // Track original position for compacting animation
 }
 
-export const GCSimulator = () => {
+export const CompactingGCSimulator = () => {
   const [heap, setHeap] = useState<MemoryCell[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [gcCycles, setGcCycles] = useState(0);
-  const [phase, setPhase] = useState<'allocating' | 'marking' | 'sweeping' | 'complete'>('allocating');
+  const [phase, setPhase] = useState<'allocating' | 'marking' | 'sweeping' | 'compacting' | 'complete'>('allocating');
   const [gridSize, setGridSize] = useState(15);
-  const [speed, setSpeed] = useState(600); // milliseconds
+  const [speed, setSpeed] = useState(600);
 
   // Initialize heap
   useEffect(() => {
@@ -58,7 +60,7 @@ export const GCSimulator = () => {
       // Allocate 3-5 new objects sequentially (top to bottom, left to right)
       const allocateCount = Math.min(Math.floor(Math.random() * 3) + 3, freeCells.length);
       for (let i = 0; i < allocateCount; i++) {
-        const cellToAllocate = freeCells[i]; // Take first available cell instead of random
+        const cellToAllocate = freeCells[i];
         if (cellToAllocate) {
           newHeap[cellToAllocate.id].state = CellState.REFERENCED;
         }
@@ -102,7 +104,7 @@ export const GCSimulator = () => {
           cell.state = CellState.FREE;
           cell.survivedCycles = 0;
         } else if (cell.state === CellState.MARKED) {
-          // Unmark and increment survival count
+          // Keep marked cells for compacting phase
           cell.state = CellState.SURVIVED;
           cell.survivedCycles++;
         }
@@ -113,9 +115,54 @@ export const GCSimulator = () => {
     toast("Liberando memoria no utilizada...");
   };
 
+  const simulateCompactingPhase = () => {
+    setHeap(prev => {
+      const newHeap = [...prev];
+      
+      // Get all survived cells
+      const survivedCells = newHeap.filter(cell => cell.state === CellState.SURVIVED);
+      
+      // Clear the heap
+      newHeap.forEach(cell => {
+        cell.state = CellState.FREE;
+        cell.survivedCycles = 0;
+        cell.originalId = undefined;
+      });
+      
+      // Compact survived cells to the beginning of the heap
+      survivedCells.forEach((cell, index) => {
+        if (index < newHeap.length) {
+          newHeap[index] = {
+            ...cell,
+            id: index,
+            originalId: cell.id,
+            state: CellState.COMPACTING
+          };
+        }
+      });
+      
+      // After a brief moment, change compacting cells to survived
+      setTimeout(() => {
+        setHeap(current => {
+          const updated = [...current];
+          updated.forEach(cell => {
+            if (cell.state === CellState.COMPACTING) {
+              cell.state = CellState.SURVIVED;
+            }
+          });
+          return updated;
+        });
+      }, 500);
+      
+      return newHeap;
+    });
+    setPhase('compacting');
+    toast("Compactando memoria...");
+  };
+
   const checkIfHeapFull = () => {
     const freeCells = heap.filter(cell => cell.state === CellState.FREE);
-    return freeCells.length < 10; // Consider full when less than 10 free cells
+    return freeCells.length < 10;
   };
 
   const nextStep = () => {
@@ -128,6 +175,8 @@ export const GCSimulator = () => {
     } else if (phase === 'marking') {
       simulateSweepPhase();
     } else if (phase === 'sweeping') {
+      simulateCompactingPhase();
+    } else if (phase === 'compacting') {
       setGcCycles(prev => prev + 1);
       if (gcCycles < 3) {
         setPhase('allocating');
@@ -176,6 +225,8 @@ export const GCSimulator = () => {
         return "bg-gc-marked-cell text-gc-marked-cell-foreground border-gc-marked-cell";
       case CellState.SURVIVED:
         return "bg-gc-survived-cell text-gc-survived-cell-foreground border-gc-survived-cell";
+      case CellState.COMPACTING:
+        return "bg-gradient-to-r from-gc-marked-cell to-gc-survived-cell text-gc-survived-cell-foreground border-gc-survived-cell animate-pulse";
       default:
         return "bg-gc-free-cell text-gc-free-cell-foreground border-border";
     }
@@ -195,7 +246,7 @@ export const GCSimulator = () => {
         onToggleSimulation={toggleSimulation}
         onNextStep={nextStep}
         onReset={initializeHeap}
-        collectorType="non-moving"
+        collectorType="compacting"
       />
 
       <main className="flex-1 bg-gradient-bg">
@@ -203,7 +254,7 @@ export const GCSimulator = () => {
         <header className="h-16 flex items-center border-b border-border bg-card/50 backdrop-blur-sm">
           <SidebarTrigger className="ml-4" />
           <div className="flex-1 text-center">
-            <h1 className="text-2xl font-bold text-foreground">NON MOVING COLLECTOR</h1>
+            <h1 className="text-2xl font-bold text-foreground">COMPACTING COLLECTOR</h1>
             <p className="text-sm text-muted-foreground">Demo</p>
           </div>
         </header>
@@ -213,7 +264,8 @@ export const GCSimulator = () => {
           <Card className="w-full max-w-2xl lg:max-w-3xl">
             <CardHeader className="pb-4">
               <CardTitle className="text-center text-lg">
-                {phase === 'allocating' ? 'Allocating' : 'Heap'}
+                {phase === 'allocating' ? 'Allocating' : 
+                 phase === 'compacting' ? 'Compacting Memory' : 'Heap'}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex justify-center p-4">
@@ -229,7 +281,7 @@ export const GCSimulator = () => {
                     key={cell.id}
                     className={`
                       aspect-square border-2 rounded flex items-center justify-center font-bold
-                      transition-all duration-300 ${getCellClassName(cell)}
+                      transition-all duration-500 ${getCellClassName(cell)}
                     `}
                     style={{ 
                       fontSize: gridSize > 18 ? '0.5rem' : gridSize > 15 ? '0.625rem' : '0.75rem'

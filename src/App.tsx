@@ -5,7 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import Index from "./pages/Index";
+import CompactingGC from "./pages/CompactingGC";
 import NotFound from "./pages/NotFound";
+import { Navigation } from "./components/Navigation";
 
 const queryClient = new QueryClient();
 
@@ -16,12 +18,16 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <SidebarProvider>
-          <div className="min-h-screen flex w-full">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+          <div className="min-h-screen flex flex-col w-full">
+            <Navigation />
+            <div className="flex flex-1">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/compacting" element={<CompactingGC />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
           </div>
         </SidebarProvider>
       </BrowserRouter>

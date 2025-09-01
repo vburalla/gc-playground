@@ -22,6 +22,7 @@ interface AppSidebarProps {
   onToggleSimulation: () => void;
   onNextStep: () => void;
   onReset: () => void;
+  collectorType?: 'non-moving' | 'compacting';
 }
 
 export function AppSidebar({
@@ -36,6 +37,7 @@ export function AppSidebar({
   onToggleSimulation,
   onNextStep,
   onReset,
+  collectorType = 'non-moving',
 }: AppSidebarProps) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -156,8 +158,11 @@ export function AppSidebar({
                   <li>2. Heap is out of memory → GC</li>
                   <li>3. Mark all live cells</li>
                   <li>4. Free all dead cells</li>
-                  <li>5. Unmark all live cells</li>
-                  <li>6. Resume Mutator</li>
+                  {collectorType === 'compacting' && (
+                    <li>5. Compact live cells to beginning</li>
+                  )}
+                  <li>{collectorType === 'compacting' ? '6' : '5'}. Unmark all live cells</li>
+                  <li>{collectorType === 'compacting' ? '7' : '6'}. Resume Mutator</li>
                 </ol>
               </div>
             </SidebarGroupContent>
