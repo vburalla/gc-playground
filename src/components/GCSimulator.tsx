@@ -91,6 +91,14 @@ export const GCSimulator = () => {
     });
     setPhase('marking');
     toast("Marcando objetos en uso...");
+    
+    // Pause for 1.5s to show marked cells
+    setTimeout(() => {
+      if (isRunning) {
+        simulateSweepPhase();
+        setCurrentStep(prev => prev + 1);
+      }
+    }, 1500);
   };
 
   const simulateSweepPhase = () => {
@@ -122,11 +130,13 @@ export const GCSimulator = () => {
     if (phase === 'allocating') {
       if (checkIfHeapFull()) {
         simulateMarkPhase();
+        return; // Don't increment step here, it will be done in the timeout
       } else {
         simulateAllocation();
       }
     } else if (phase === 'marking') {
-      simulateSweepPhase();
+      // This is handled by the timeout in simulateMarkPhase
+      return;
     } else if (phase === 'sweeping') {
       setGcCycles(prev => prev + 1);
       if (gcCycles < 3) {
@@ -218,10 +228,11 @@ export const GCSimulator = () => {
             </CardHeader>
             <CardContent className="flex justify-center p-4">
               <div 
-                className="grid gap-1 w-full"
+                className="grid gap-1 w-full mx-auto"
                 style={{ 
                   gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
-                  maxWidth: `min(70vw, ${Math.min(gridSize * 2.5, 40)}rem)`
+                  maxWidth: gridSize <= 10 ? '32rem' : gridSize <= 15 ? '40rem' : '48rem',
+                  width: '100%'
                 }}
               >
                 {heap.map((cell) => (

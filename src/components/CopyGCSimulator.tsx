@@ -104,6 +104,14 @@ export const CopyGCSimulator = () => {
     });
     setPhase('marking');
     toast("Marcando objetos en uso...");
+    
+    // Pause for 1.5s to show marked cells
+    setTimeout(() => {
+      if (isRunning) {
+        simulateCopyPhase();
+        setCurrentStep(prev => prev + 1);
+      }
+    }, 1500);
   };
 
   const simulateCopyPhase = () => {
@@ -199,11 +207,13 @@ export const CopyGCSimulator = () => {
     if (phase === 'allocating') {
       if (checkIfActiveSpaceFull()) {
         simulateMarkPhase();
+        return; // Don't increment step here, it will be done in the timeout
       } else {
         simulateAllocation();
       }
     } else if (phase === 'marking') {
-      simulateCopyPhase();
+      // This is handled by the timeout in simulateMarkPhase
+      return;
     } else if (phase === 'copying') {
       simulateSwapSpaces();
     } else if (phase === 'swapping') {
@@ -306,10 +316,11 @@ export const CopyGCSimulator = () => {
               <div>
                 <h3 className="text-sm font-medium mb-2 text-center">{getSpaceLabel('from')}</h3>
                 <div 
-                  className="grid gap-1 w-full border-2 border-dashed border-muted p-2 rounded"
+                  className="grid gap-1 w-full border-2 border-dashed border-muted p-2 rounded mx-auto"
                   style={{ 
                     gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
-                    maxWidth: `min(70vw, ${Math.min(gridSize * 2.5, 40)}rem)`
+                    maxWidth: gridSize <= 10 ? '32rem' : gridSize <= 15 ? '40rem' : '48rem',
+                    width: '100%'
                   }}
                 >
                   {heap.filter(cell => cell.space === 'from').map((cell) => (
@@ -336,10 +347,11 @@ export const CopyGCSimulator = () => {
               <div>
                 <h3 className="text-sm font-medium mb-2 text-center">{getSpaceLabel('to')}</h3>
                 <div 
-                  className="grid gap-1 w-full border-2 border-dashed border-muted p-2 rounded"
+                  className="grid gap-1 w-full border-2 border-dashed border-muted p-2 rounded mx-auto"
                   style={{ 
                     gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
-                    maxWidth: `min(70vw, ${Math.min(gridSize * 2.5, 40)}rem)`
+                    maxWidth: gridSize <= 10 ? '32rem' : gridSize <= 15 ? '40rem' : '48rem',
+                    width: '100%'
                   }}
                 >
                   {heap.filter(cell => cell.space === 'to').map((cell) => (
