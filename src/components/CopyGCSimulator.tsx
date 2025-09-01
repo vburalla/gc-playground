@@ -149,14 +149,14 @@ export const CopyGCSimulator = () => {
             survivedCycles: markedCell.survivedCycles + 1
           };
         }
-        
-        // Clear the original cell
-        newHeap[markedCell.id] = {
-          state: CellState.FREE,
-          survivedCycles: 0,
-          id: markedCell.id,
-          space: markedCell.space
-        };
+      });
+      
+      // CLEAR ALL CELLS IN THE ACTIVE SPACE (source space) after copying
+      newHeap.forEach(cell => {
+        if (cell.space === activeSpace) {
+          cell.state = CellState.FREE;
+          cell.survivedCycles = 0;
+        }
       });
       
       // After a brief moment, change copying cells to survived
