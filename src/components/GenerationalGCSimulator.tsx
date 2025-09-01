@@ -161,9 +161,16 @@ export const GenerationalGCSimulator = () => {
         cell.space === activeSurvivorSpace && cell.state === CellState.FREE
       );
 
+      const availableTenuredCells = newHeap.filter(cell => 
+        cell.space === 'tenured' && cell.state === CellState.FREE
+      );
+
       let survivorIndex = 0;
+      let tenuredIndex = 0;
+
       markedEdenCells.forEach(markedCell => {
         if (survivorIndex < availableSurvivorCells.length) {
+          // Hay espacio en survivor - mover ahí
           const targetCell = availableSurvivorCells[survivorIndex++];
           newHeap[targetCell.id] = {
             state: CellState.COPYING,
@@ -171,7 +178,17 @@ export const GenerationalGCSimulator = () => {
             id: targetCell.id,
             space: activeSurvivorSpace
           };
+        } else if (tenuredIndex < availableTenuredCells.length) {
+          // Survivor lleno - mover directamente a tenured
+          const targetCell = availableTenuredCells[tenuredIndex++];
+          newHeap[targetCell.id] = {
+            state: CellState.COPYING,
+            survivedCycles: 0, // Reset counter en tenured
+            id: targetCell.id,
+            space: 'tenured'
+          };
         }
+        // Si no hay espacio ni en survivor ni en tenured, el objeto se pierde (no debería pasar)
       });
 
       // Clear Eden space
