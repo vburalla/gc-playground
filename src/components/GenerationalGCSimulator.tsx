@@ -41,50 +41,42 @@ export const GenerationalGCSimulator = () => {
     const totalCells = gridSize * gridSize;
     const newHeap: MemoryCell[] = [];
     
-    const edenCells = Math.floor(totalCells * edenSize);
-    const survivorCells = Math.floor((totalCells - edenCells) * 0.2); // 20% each for survivor spaces
-    const tenuredCells = totalCells - edenCells - (survivorCells * 2);
+    // Calculate columns for each zone (vertical distribution)
+    const edenCols = Math.floor(gridSize * edenSize);
+    const tenuredCols = Math.floor(gridSize * 0.4); // 40% for tenured
+    const survivorCols = gridSize - edenCols - tenuredCols;
+    const survivorRows = Math.floor(gridSize / 2); // Half rows for each survivor space
     
-    let cellIndex = 0;
-    
-    // Create Eden Space (first area)
-    for (let i = 0; i < edenCells; i++) {
+    // Initialize all cells first
+    for (let i = 0; i < totalCells; i++) {
       newHeap.push({
         state: CellState.FREE,
         survivedCycles: 0,
-        id: cellIndex++,
-        space: 'eden'
+        id: i,
+        space: 'eden' // default, will be reassigned
       });
     }
     
-    // Create Survivor From Space (second area)
-    for (let i = 0; i < survivorCells; i++) {
-      newHeap.push({
-        state: CellState.FREE,
-        survivedCycles: 0,
-        id: cellIndex++,
-        space: 'survivor-from'
-      });
-    }
-    
-    // Create Survivor To Space (third area)
-    for (let i = 0; i < survivorCells; i++) {
-      newHeap.push({
-        state: CellState.FREE,
-        survivedCycles: 0,
-        id: cellIndex++,
-        space: 'survivor-to'
-      });
-    }
-    
-    // Create Tenured Space (final area)
-    for (let i = 0; i < tenuredCells; i++) {
-      newHeap.push({
-        state: CellState.FREE,
-        survivedCycles: 0,
-        id: cellIndex++,
-        space: 'tenured'
-      });
+    // Assign spaces based on position
+    for (let row = 0; row < gridSize; row++) {
+      for (let col = 0; col < gridSize; col++) {
+        const cellId = row * gridSize + col;
+        
+        if (col < edenCols) {
+          // Eden Space (leftmost columns)
+          newHeap[cellId].space = 'eden';
+        } else if (col < edenCols + survivorCols) {
+          // Survivor Space (middle columns)
+          if (row < survivorRows) {
+            newHeap[cellId].space = 'survivor-from'; // Top half
+          } else {
+            newHeap[cellId].space = 'survivor-to'; // Bottom half
+          }
+        } else {
+          // Tenured Space (rightmost columns)
+          newHeap[cellId].space = 'tenured';
+        }
+      }
     }
     
     setHeap(newHeap);
@@ -319,51 +311,62 @@ export const GenerationalGCSimulator = () => {
   };
 
   const getCellBorder = (cell: MemoryCell, index: number) => {
-    const totalCells = gridSize * gridSize;
-    const edenCells = Math.floor(totalCells * edenSize);
-    const survivorCells = Math.floor((totalCells - edenCells) * 0.2);
+    const row = Math.floor(index / gridSize);
+    const col = index % gridSize;
     
-    const edenEnd = edenCells - 1;
-    const survivorFromEnd = edenCells + survivorCells - 1;
-    const survivorToEnd = edenCells + (survivorCells * 2) - 1;
+    const edenCols = Math.floor(gridSize * edenSize);
+    const tenuredCols = Math.floor(gridSize * 0.4);
+    const survivorCols = gridSize - edenCols - tenuredCols;
+    const survivorRows = Math.floor(gridSize / 2);
     
-    let borderClasses = "";
+    let borderClasses = "border";
     
-    // Eden Space border (yellow)
-    if (index <= edenEnd) {
-      borderClasses += "border-yellow-500";
-      if (index === edenEnd) borderClasses += " border-b-4";
-      else borderClasses += " border-b";
+    // Eden Space borders (yellow)
+    if (cell.space === 'eden') {
+      borderClasses += " border-yellow-500";
+      if (col === edenCols - 1) borderClasses += " border-r-4"; // Right border of Eden
     }
-    // Survivor From border (orange)
-    else if (index <= survivorFromEnd) {
-      borderClasses += "border-orange-500";
-      if (index === survivorFromEnd) borderClasses += " border-b-4";
-      else borderClasses += " border-b";
+    // Survivor From borders (orange)
+    else if (cell.space === 'survivor-from') {
+      borderClasses += " border-orange-500";
+      if (col === edenCols) borderClasses += " border-l-4"; // Left border of Survivor
+      if (col === edenCols + survivorCols - 1) borderClasses += " border-r-4"; // Right border of Survivor
+      if (row === survivorRows - 1) borderClasses += " border-b-4"; // Bottom border between From/To
     }
-    // Survivor To border (cyan)
-    else if (index <= survivorToEnd) {
-      borderClasses += "border-cyan-500";
-      if (index === survivorToEnd) borderClasses += " border-b-4";
-      else borderClasses += " border-b";
+    // Survivor To borders (cyan)
+    else if (cell.space === 'survivor-to') {
+      borderClasses += " border-cyan-500";
+      if (col === edenCols) borderClasses += " border-l-4"; // Left border of Survivor
+      if (col === edenCols + survivorCols - 1) borderClasses += " border-r-4"; // Right border of Survivor
+      if (row === survivorRows) borderClasses += " border-t-4"; // Top border between From/To
     }
-    // Tenured border (purple)
-    else {
-      borderClasses += "border-purple-500 border-b";
+    // Tenured borders (purple)
+    else if (cell.space === 'tenured') {
+      borderClasses += " border-purple-500";
+      if (col === edenCols + survivorCols) borderClasses += " border-l-4"; // Left border of Tenured
     }
     
     return borderClasses;
   };
 
   const getSpaceLabel = (index: number) => {
-    const totalCells = gridSize * gridSize;
-    const edenCells = Math.floor(totalCells * edenSize);
-    const survivorCells = Math.floor((totalCells - edenCells) * 0.2);
+    const row = Math.floor(index / gridSize);
+    const col = index % gridSize;
     
-    if (index === 0) return "Eden Space";
-    if (index === edenCells) return "Survivor From";
-    if (index === edenCells + survivorCells) return "Survivor To";
-    if (index === edenCells + (survivorCells * 2)) return "Tenured Space";
+    const edenCols = Math.floor(gridSize * edenSize);
+    const tenuredCols = Math.floor(gridSize * 0.4);
+    const survivorCols = gridSize - edenCols - tenuredCols;
+    const survivorRows = Math.floor(gridSize / 2);
+    
+    // Show labels at the top of each zone
+    if (row === 0) {
+      if (col === 0) return "Eden Space";
+      if (col === edenCols) return "Survivor From";
+      if (col === edenCols + survivorCols) return "Tenured Space";
+    }
+    // Show Survivor To label at the middle row
+    if (row === survivorRows && col === edenCols) return "Survivor To";
+    
     return "";
   };
 
@@ -415,13 +418,13 @@ export const GenerationalGCSimulator = () => {
                 return (
                   <div key={cell.id} className="relative">
                     {label && (
-                      <div className="absolute -top-6 left-0 text-xs font-semibold text-foreground whitespace-nowrap z-10 bg-background px-2 py-1 rounded border">
+                      <div className="absolute -top-7 left-0 text-xs font-bold text-foreground whitespace-nowrap z-10 bg-background px-2 py-1 rounded shadow-sm border-2 border-current">
                         {label}
                       </div>
                     )}
                     <div
                       className={`
-                        aspect-square rounded-sm transition-all duration-300 flex items-center justify-center text-xs font-semibold
+                        aspect-square transition-all duration-300 flex items-center justify-center text-xs font-semibold
                         ${getCellColor(cell)} ${borderClasses}
                         hover:scale-110 cursor-pointer
                       `}
