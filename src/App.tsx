@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import Index from "./pages/Index";
 import CompactingGC from "./pages/CompactingGC";
+import CopyGC from "./pages/CopyGC";
 import NotFound from "./pages/NotFound";
 import { Navigation } from "./components/Navigation";
 
@@ -24,6 +25,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/compacting" element={<CompactingGC />} />
+                <Route path="/copy" element={<CopyGC />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

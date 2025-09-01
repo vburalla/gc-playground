@@ -22,7 +22,8 @@ interface AppSidebarProps {
   onToggleSimulation: () => void;
   onNextStep: () => void;
   onReset: () => void;
-  collectorType?: 'non-moving' | 'compacting';
+  collectorType?: 'non-moving' | 'compacting' | 'copy';
+  activeSpace?: 'from' | 'to';
 }
 
 export function AppSidebar({
@@ -38,6 +39,7 @@ export function AppSidebar({
   onNextStep,
   onReset,
   collectorType = 'non-moving',
+  activeSpace,
 }: AppSidebarProps) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -103,6 +105,9 @@ export function AppSidebar({
                   <p className="text-sm text-muted-foreground">Ciclos GC: {gcCycles}</p>
                   <p className="text-sm text-muted-foreground">Fase: {phase}</p>
                   <p className="text-sm text-muted-foreground">Celdas: {gridSize}x{gridSize}</p>
+                  {collectorType === 'copy' && activeSpace && (
+                    <p className="text-sm text-muted-foreground">Activo: {activeSpace === 'from' ? 'From' : 'To'} Space</p>
+                  )}
                 </div>
               )}
               
@@ -154,15 +159,25 @@ export function AppSidebar({
             <SidebarGroupContent>
               <div className="p-4">
                 <ol className="text-sm space-y-1 text-muted-foreground">
-                  <li>1. Mutator allocates cells in Heap</li>
-                  <li>2. Heap is out of memory → GC</li>
+                  <li>1. Mutator allocates cells in {collectorType === 'copy' ? 'active space' : 'Heap'}</li>
+                  <li>2. {collectorType === 'copy' ? 'Active space' : 'Heap'} is out of memory → GC</li>
                   <li>3. Mark all live cells</li>
-                  <li>4. Free all dead cells</li>
-                  {collectorType === 'compacting' && (
-                    <li>5. Compact live cells to beginning</li>
+                  {collectorType === 'copy' ? (
+                    <>
+                      <li>4. Copy live cells to other space</li>
+                      <li>5. Swap active space</li>
+                      <li>6. Resume Mutator</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>4. Free all dead cells</li>
+                      {collectorType === 'compacting' && (
+                        <li>5. Compact live cells to beginning</li>
+                      )}
+                      <li>{collectorType === 'compacting' ? '6' : '5'}. Unmark all live cells</li>
+                      <li>{collectorType === 'compacting' ? '7' : '6'}. Resume Mutator</li>
+                    </>
                   )}
-                  <li>{collectorType === 'compacting' ? '6' : '5'}. Unmark all live cells</li>
-                  <li>{collectorType === 'compacting' ? '7' : '6'}. Resume Mutator</li>
                 </ol>
               </div>
             </SidebarGroupContent>
