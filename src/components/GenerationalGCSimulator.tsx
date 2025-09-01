@@ -41,51 +41,62 @@ export const GenerationalGCSimulator = () => {
     const totalCells = gridSize * gridSize;
     const newHeap: MemoryCell[] = [];
     
-    const edenCells = Math.floor(totalCells * edenSize);
-    const survivorCells = Math.floor((totalCells - edenCells) * 0.4); // 40% of remaining
-    const tenuredCells = totalCells - edenCells - (survivorCells * 2);
+    // Calculate cells per zone (vertical distribution)
+    const edenCols = Math.floor(gridSize * edenSize);
+    const survivorCols = Math.floor((gridSize - edenCols) * 0.5); // Half of remaining
+    const tenuredCols = gridSize - edenCols - (survivorCols * 2);
     
-    let cellIndex = 0;
-    
-    // Create Eden Space (top area)
-    for (let i = 0; i < edenCells; i++) {
-      newHeap.push({
-        state: CellState.FREE,
-        survivedCycles: 0,
-        id: cellIndex++,
-        space: 'eden'
-      });
+    // Create zones column by column (vertical separation)
+    for (let row = 0; row < gridSize; row++) {
+      let col = 0;
+      
+      // Eden Space (leftmost columns)
+      for (let edenCol = 0; edenCol < edenCols; edenCol++) {
+        const cellId = row * gridSize + col++;
+        newHeap.push({
+          state: CellState.FREE,
+          survivedCycles: 0,
+          id: cellId,
+          space: 'eden'
+        });
+      }
+      
+      // Survivor From Space
+      for (let survivorCol = 0; survivorCol < survivorCols; survivorCol++) {
+        const cellId = row * gridSize + col++;
+        newHeap.push({
+          state: CellState.FREE,
+          survivedCycles: 0,
+          id: cellId,
+          space: 'survivor-from'
+        });
+      }
+      
+      // Survivor To Space
+      for (let survivorCol = 0; survivorCol < survivorCols; survivorCol++) {
+        const cellId = row * gridSize + col++;
+        newHeap.push({
+          state: CellState.FREE,
+          survivedCycles: 0,
+          id: cellId,
+          space: 'survivor-to'
+        });
+      }
+      
+      // Tenured Space (rightmost columns)
+      for (let tenuredCol = 0; tenuredCol < tenuredCols; tenuredCol++) {
+        const cellId = row * gridSize + col++;
+        newHeap.push({
+          state: CellState.FREE,
+          survivedCycles: 0,
+          id: cellId,
+          space: 'tenured'
+        });
+      }
     }
     
-    // Create Survivor From Space
-    for (let i = 0; i < survivorCells; i++) {
-      newHeap.push({
-        state: CellState.FREE,
-        survivedCycles: 0,
-        id: cellIndex++,
-        space: 'survivor-from'
-      });
-    }
-    
-    // Create Survivor To Space
-    for (let i = 0; i < survivorCells; i++) {
-      newHeap.push({
-        state: CellState.FREE,
-        survivedCycles: 0,
-        id: cellIndex++,
-        space: 'survivor-to'
-      });
-    }
-    
-    // Create Tenured Space (bottom area)
-    for (let i = 0; i < tenuredCells; i++) {
-      newHeap.push({
-        state: CellState.FREE,
-        survivedCycles: 0,
-        id: cellIndex++,
-        space: 'tenured'
-      });
-    }
+    // Sort by ID to maintain grid order
+    newHeap.sort((a, b) => a.id - b.id);
     
     setHeap(newHeap);
     setCurrentStep(0);
@@ -315,31 +326,44 @@ export const GenerationalGCSimulator = () => {
       [CellState.COPYING]: "bg-purple-400 dark:bg-purple-600"
     };
 
-    let spaceModifier = "";
+    // Space background colors for better visual separation
+    let spaceBackground = "";
+    let spaceBorder = "";
+    
     if (cell.space === 'eden') {
-      spaceModifier = " border-2 border-orange-500";
-    } else if (cell.space === 'survivor-from' || cell.space === 'survivor-to') {
-      spaceModifier = cell.space === activeSurvivorSpace 
-        ? " border-2 border-cyan-500" 
-        : " border-2 border-cyan-300 opacity-70";
+      spaceBackground = cell.state === CellState.FREE ? "bg-yellow-50 dark:bg-yellow-900/20" : "";
+      spaceBorder = "border-l-4 border-yellow-500";
+    } else if (cell.space === 'survivor-from') {
+      spaceBackground = cell.state === CellState.FREE ? "bg-orange-50 dark:bg-orange-900/20" : "";
+      spaceBorder = activeSurvivorSpace === 'survivor-from' 
+        ? "border-l-4 border-orange-500" 
+        : "border-l-4 border-orange-300";
+    } else if (cell.space === 'survivor-to') {
+      spaceBackground = cell.state === CellState.FREE ? "bg-gray-50 dark:bg-gray-900/20" : "";
+      spaceBorder = activeSurvivorSpace === 'survivor-to' 
+        ? "border-l-4 border-gray-500" 
+        : "border-l-4 border-gray-300";
     } else if (cell.space === 'tenured') {
-      spaceModifier = " border-2 border-purple-500";
+      spaceBackground = cell.state === CellState.FREE ? "bg-blue-50 dark:bg-blue-900/20" : "";
+      spaceBorder = "border-l-4 border-blue-500";
     }
 
-    return baseColors[cell.state] + spaceModifier;
+    const finalColor = cell.state === CellState.FREE ? spaceBackground : baseColors[cell.state];
+    return `${finalColor} ${spaceBorder}`;
   };
 
   const getSpaceLabel = (index: number) => {
     const cell = heap[index];
     if (!cell) return "";
     
-    const edenCells = Math.floor(gridSize * gridSize * edenSize);
-    const survivorCells = Math.floor((gridSize * gridSize - edenCells) * 0.4);
+    const edenCols = Math.floor(gridSize * edenSize);
+    const survivorCols = Math.floor((gridSize - edenCols) * 0.5);
     
+    // Labels appear at the top of each zone (first row)
     if (index === 0) return "Eden Space";
-    if (index === edenCells) return "Survivor From";
-    if (index === edenCells + survivorCells) return "Survivor To";
-    if (index === edenCells + (survivorCells * 2)) return "Tenured Space";
+    if (index === edenCols) return "Survivor From";
+    if (index === edenCols + survivorCols) return "Survivor To";
+    if (index === edenCols + (survivorCols * 2)) return "Tenured Space";
     return "";
   };
 
@@ -377,40 +401,73 @@ export const GenerationalGCSimulator = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div 
-              className="grid gap-1 mx-auto w-fit p-4 bg-muted/20 rounded-lg"
-              style={{ 
-                gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-                maxWidth: '90vw',
-                aspectRatio: '1'
-              }}
-            >
-              {heap.map((cell, index) => {
-                const label = getSpaceLabel(index);
-                return (
-                  <div key={cell.id} className="relative">
-                    {label && (
-                      <div className="absolute -top-6 left-0 text-xs font-semibold text-foreground whitespace-nowrap z-10">
-                        {label}
-                      </div>
-                    )}
-                    <div
-                      className={`
-                        aspect-square rounded-sm transition-all duration-300 flex items-center justify-center text-xs font-semibold
-                        ${getCellColor(cell)}
-                        hover:scale-110 cursor-pointer
-                      `}
-                      style={{
-                        minWidth: `${Math.max(20, 600/gridSize)}px`,
-                        minHeight: `${Math.max(20, 600/gridSize)}px`
-                      }}
-                      title={`Celda ${cell.id}: ${cell.state} (Ciclos: ${cell.survivedCycles}) - ${cell.space}`}
-                    >
-                      {cell.survivedCycles > 0 ? cell.survivedCycles : ''}
+            <div className="mx-auto w-fit p-4 bg-muted/10 rounded-lg">
+              {/* Zone Labels */}
+              <div 
+                className="grid gap-1 mb-2"
+                style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}
+              >
+                {Array.from({ length: gridSize }, (_, index) => {
+                  const label = getSpaceLabel(index);
+                  return (
+                    <div key={index} className="text-center">
+                      {label && (
+                        <div className="text-xs font-bold text-foreground py-1 px-2 rounded bg-muted/50">
+                          {label}
+                        </div>
+                      )}
                     </div>
+                  );
+                })}
+              </div>
+              
+              {/* Memory Grid */}
+              <div 
+                className="grid gap-0.5 border-2 border-muted rounded-lg overflow-hidden"
+                style={{ 
+                  gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+                  maxWidth: '90vw',
+                  aspectRatio: '1'
+                }}
+              >
+                {heap.map((cell) => (
+                  <div
+                    key={cell.id}
+                    className={`
+                      aspect-square transition-all duration-300 flex items-center justify-center text-xs font-semibold
+                      ${getCellColor(cell)}
+                      hover:scale-105 cursor-pointer border-r border-muted/30 last:border-r-0
+                    `}
+                    style={{
+                      minWidth: `${Math.max(20, 600/gridSize)}px`,
+                      minHeight: `${Math.max(20, 600/gridSize)}px`
+                    }}
+                    title={`Celda ${cell.id}: ${cell.state} (Ciclos: ${cell.survivedCycles}) - ${cell.space}`}
+                  >
+                    {cell.survivedCycles > 0 ? cell.survivedCycles : ''}
                   </div>
-                );
-              })}
+                ))}
+              </div>
+              
+              {/* Legend */}
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 rounded-sm"></div>
+                  <span>Eden Space</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 rounded-sm"></div>
+                  <span>Survivor From</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-gray-50 dark:bg-gray-900/20 border-l-4 border-gray-500 rounded-sm"></div>
+                  <span>Survivor To</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-sm"></div>
+                  <span>Tenured Space</span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
