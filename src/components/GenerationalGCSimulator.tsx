@@ -124,28 +124,42 @@ export const GenerationalGCSimulator = () => {
   const simulateMarkPhase = () => {
     setHeap(prev => {
       const newHeap = [...prev];
-      // Randomly dereference some objects in survivor spaces (NOT tenured - they accumulate)
+      
+      // Dereference some survived objects across all spaces during marking phase
       newHeap.forEach(cell => {
-        if ((cell.space === 'survivor-from' || cell.space === 'survivor-to') && cell.state === CellState.SURVIVED) {
-          if (Math.random() < 0.15) { // 15% chance of deallocation in survivor
+        // Eden space: objects that were referenced can lose references
+        if (cell.space === 'eden' && cell.state === CellState.REFERENCED) {
+          if (Math.random() < 0.25) { // 25% chance in Eden (high mortality)
             cell.state = CellState.DEREFERENCED;
             cell.survivedCycles = 0;
           }
         }
-        // Tenured objects can also become garbage, but they accumulate until Major GC
+        
+        // Survivor spaces: survived objects can become garbage
+        if ((cell.space === 'survivor-from' || cell.space === 'survivor-to') && cell.state === CellState.SURVIVED) {
+          if (Math.random() < 0.20) { // 20% chance in survivor spaces
+            cell.state = CellState.DEREFERENCED;
+            cell.survivedCycles = 0;
+          }
+        }
+        
+        // Tenured space: even old objects can become garbage (accumulate until Major GC)
         if (cell.space === 'tenured' && cell.state === CellState.SURVIVED) {
-          if (Math.random() < 0.1) { // 10% chance in tenured - they will accumulate
+          if (Math.random() < 0.12) { // 12% chance in tenured - they accumulate
             cell.state = CellState.DEREFERENCED;
             cell.survivedCycles = 0;
           }
         }
       });
-      // Mark reachable/live objects
+      
+      // Mark reachable/live objects (objects that are still referenced or have survived cycles)
       newHeap.forEach(cell => {
-        if (cell.state === CellState.REFERENCED || cell.survivedCycles > 0) {
+        if (cell.state === CellState.REFERENCED || 
+           (cell.state === CellState.SURVIVED && cell.survivedCycles > 0)) {
           cell.state = CellState.MARKED;
         }
       });
+      
       return newHeap;
     });
   };
