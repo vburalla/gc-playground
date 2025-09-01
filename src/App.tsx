@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import Index from "./pages/Index";
 import CompactingGC from "./pages/CompactingGC";
 import CopyGC from "./pages/CopyGC";
+import GenerationalGC from "./pages/GenerationalGC";
 import NotFound from "./pages/NotFound";
 import { Navigation } from "./components/Navigation";
 
@@ -26,6 +27,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/compacting" element={<CompactingGC />} />
                 <Route path="/copy" element={<CopyGC />} />
+                <Route path="/generational" element={<GenerationalGC />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

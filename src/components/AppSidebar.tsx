@@ -22,8 +22,12 @@ interface AppSidebarProps {
   onToggleSimulation: () => void;
   onNextStep: () => void;
   onReset: () => void;
-  collectorType?: 'non-moving' | 'compacting' | 'copy';
+  collectorType?: 'non-moving' | 'compacting' | 'copy' | 'generational';
   activeSpace?: 'from' | 'to';
+  edenSize?: number;
+  setEdenSize?: (size: number) => void;
+  tenureThreshold?: number;
+  setTenureThreshold?: (threshold: number) => void;
 }
 
 export function AppSidebar({
@@ -40,6 +44,10 @@ export function AppSidebar({
   onReset,
   collectorType = 'non-moving',
   activeSpace,
+  edenSize,
+  setEdenSize,
+  tenureThreshold,
+  setTenureThreshold,
 }: AppSidebarProps) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -90,6 +98,47 @@ export function AppSidebar({
                   <option value={1200}>Muy Lenta</option>
                 </select>
               </div>
+
+              {/* Configuraciones específicas del Generational GC */}
+              {collectorType === 'generational' && setEdenSize && setTenureThreshold && edenSize !== undefined && tenureThreshold !== undefined && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      {!isCollapsed && "Tamaño Eden (%)"}
+                    </label>
+                    <select 
+                      value={edenSize} 
+                      onChange={(e) => setEdenSize(Number(e.target.value))}
+                      disabled={isRunning}
+                      className="w-full p-2 rounded border bg-background text-foreground text-sm"
+                      title="Tamaño Eden Space"
+                    >
+                      <option value={0.3}>30%</option>
+                      <option value={0.4}>40%</option>
+                      <option value={0.5}>50%</option>
+                      <option value={0.6}>60%</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      {!isCollapsed && "Umbral Tenured"}
+                    </label>
+                    <select 
+                      value={tenureThreshold} 
+                      onChange={(e) => setTenureThreshold(Number(e.target.value))}
+                      disabled={isRunning}
+                      className="w-full p-2 rounded border bg-background text-foreground text-sm"
+                      title="Ciclos para mover a Tenured"
+                    >
+                      <option value={2}>2 ciclos</option>
+                      <option value={3}>3 ciclos</option>
+                      <option value={4}>4 ciclos</option>
+                      <option value={5}>5 ciclos</option>
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -159,17 +208,30 @@ export function AppSidebar({
             <SidebarGroupContent>
               <div className="p-4">
                 <ol className="text-sm space-y-1 text-muted-foreground">
-                  <li>1. Mutator allocates cells in {collectorType === 'copy' ? 'active space' : 'Heap'}</li>
-                  <li>2. {collectorType === 'copy' ? 'Active space' : 'Heap'} is out of memory → GC</li>
-                  <li>3. Mark all live cells</li>
-                  {collectorType === 'copy' ? (
+                  {collectorType === 'generational' ? (
                     <>
+                      <li>1. Allocate objects in Eden Space</li>
+                      <li>2. Eden is full → Minor GC</li>
+                      <li>3. Mark all live objects</li>
+                      <li>4. Copy live objects to Survivor</li>
+                      <li>5. Objects surviving N cycles → Tenured</li>
+                      <li>6. Clear source spaces</li>
+                      <li>7. Resume allocation</li>
+                    </>
+                  ) : collectorType === 'copy' ? (
+                    <>
+                      <li>1. Mutator allocates cells in active space</li>
+                      <li>2. Active space is out of memory → GC</li>
+                      <li>3. Mark all live cells</li>
                       <li>4. Copy live cells to other space</li>
                       <li>5. Swap active space</li>
                       <li>6. Resume Mutator</li>
                     </>
                   ) : (
                     <>
+                      <li>1. Mutator allocates cells in Heap</li>
+                      <li>2. Heap is out of memory → GC</li>
+                      <li>3. Mark all live cells</li>
                       <li>4. Free all dead cells</li>
                       {collectorType === 'compacting' && (
                         <li>5. Compact live cells to beginning</li>
