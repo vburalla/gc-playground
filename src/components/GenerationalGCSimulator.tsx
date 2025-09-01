@@ -29,7 +29,7 @@ export const GenerationalGCSimulator = () => {
   const [gridSize, setGridSize] = useState(15);
   const [speed, setSpeed] = useState(600);
   const [activeSurvivorSpace, setActiveSurvivorSpace] = useState<'survivor-from' | 'survivor-to'>('survivor-from');
-  const [edenSize, setEdenSize] = useState(0.4); // 40% of total space
+  const [edenSize, setEdenSize] = useState(0.15); // Eden entre 10% y 20%
   const [tenureThreshold, setTenureThreshold] = useState(3); // cycles to move to tenured
 
   // Initialize heap with four spaces
@@ -42,7 +42,7 @@ export const GenerationalGCSimulator = () => {
     const newHeap: MemoryCell[] = [];
     
     // Calculate columns for each zone (vertical distribution)
-    const edenCols = Math.floor(gridSize * edenSize);
+    const edenCols = Math.floor(gridSize * Math.min(Math.max(edenSize, 0.1), 0.2));
     const tenuredCols = Math.floor(gridSize * 0.4); // 40% for tenured
     const survivorCols = gridSize - edenCols - tenuredCols;
     const survivorRows = Math.floor(gridSize / 2); // Half rows for each survivor space
@@ -299,12 +299,12 @@ export const GenerationalGCSimulator = () => {
 
   const getCellColor = (cell: MemoryCell) => {
     const baseColors = {
-      [CellState.FREE]: "bg-gray-100 dark:bg-gray-800",
-      [CellState.REFERENCED]: "bg-blue-400 dark:bg-blue-600",
-      [CellState.DEREFERENCED]: "bg-red-400 dark:bg-red-600", 
-      [CellState.MARKED]: "bg-yellow-400 dark:bg-yellow-600",
-      [CellState.SURVIVED]: "bg-green-400 dark:bg-green-600",
-      [CellState.COPYING]: "bg-purple-400 dark:bg-purple-600"
+      [CellState.FREE]: "bg-gc-free-cell",
+      [CellState.REFERENCED]: "bg-gc-referenced-cell",
+      [CellState.DEREFERENCED]: "bg-gc-dereferenced-cell", 
+      [CellState.MARKED]: "bg-gc-marked-cell",
+      [CellState.SURVIVED]: "bg-gc-survived-cell",
+      [CellState.COPYING]: "bg-accent"
     };
 
     return baseColors[cell.state];
@@ -323,26 +323,26 @@ export const GenerationalGCSimulator = () => {
     
     // Eden Space borders (yellow)
     if (cell.space === 'eden') {
-      borderClasses += " border-yellow-500";
+      borderClasses += " border-primary";
       if (col === edenCols - 1) borderClasses += " border-r-4"; // Right border of Eden
     }
     // Survivor From borders (orange)
     else if (cell.space === 'survivor-from') {
-      borderClasses += " border-orange-500";
+      borderClasses += " border-accent";
       if (col === edenCols) borderClasses += " border-l-4"; // Left border of Survivor
       if (col === edenCols + survivorCols - 1) borderClasses += " border-r-4"; // Right border of Survivor
       if (row === survivorRows - 1) borderClasses += " border-b-4"; // Bottom border between From/To
     }
     // Survivor To borders (cyan)
     else if (cell.space === 'survivor-to') {
-      borderClasses += " border-cyan-500";
+      borderClasses += " border-ring";
       if (col === edenCols) borderClasses += " border-l-4"; // Left border of Survivor
       if (col === edenCols + survivorCols - 1) borderClasses += " border-r-4"; // Right border of Survivor
       if (row === survivorRows) borderClasses += " border-t-4"; // Top border between From/To
     }
     // Tenured borders (purple)
     else if (cell.space === 'tenured') {
-      borderClasses += " border-purple-500";
+      borderClasses += " border-secondary";
       if (col === edenCols + survivorCols) borderClasses += " border-l-4"; // Left border of Tenured
     }
     
@@ -405,7 +405,7 @@ export const GenerationalGCSimulator = () => {
           </CardHeader>
           <CardContent>
             <div 
-              className="grid gap-1 mx-auto w-fit p-4 bg-muted/20 rounded-lg"
+              className="grid gap-0 mx-auto w-fit p-4 bg-muted/20 rounded-lg"
               style={{ 
                 gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
                 maxWidth: '90vw',

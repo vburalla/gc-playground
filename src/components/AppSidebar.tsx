@@ -113,10 +113,9 @@ export function AppSidebar({
                       className="w-full p-2 rounded border bg-background text-foreground text-sm"
                       title="Tamaño Eden Space"
                     >
-                      <option value={0.3}>30%</option>
-                      <option value={0.4}>40%</option>
-                      <option value={0.5}>50%</option>
-                      <option value={0.6}>60%</option>
+                      <option value={0.1}>10%</option>
+                      <option value={0.15}>15%</option>
+                      <option value={0.2}>20%</option>
                     </select>
                   </div>
 
