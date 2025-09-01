@@ -540,8 +540,8 @@ export const GenerationalGCSimulator = () => {
       />
       
       <main className="flex-1 p-6">
-        <div className="flex items-center gap-2 mb-6">
           <SidebarTrigger />
+        <div className="flex-1 text-center">
           <h1 className="text-2xl font-bold">Generational Garbage Collector</h1>
         </div>
         
