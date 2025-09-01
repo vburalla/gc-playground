@@ -24,8 +24,6 @@ interface AppSidebarProps {
   onReset: () => void;
   collectorType?: 'non-moving' | 'compacting' | 'copy' | 'generational';
   activeSpace?: 'from' | 'to';
-  edenSize?: number;
-  setEdenSize?: (size: number) => void;
   tenureThreshold?: number;
   setTenureThreshold?: (threshold: number) => void;
 }
@@ -44,8 +42,6 @@ export function AppSidebar({
   onReset,
   collectorType = 'non-moving',
   activeSpace,
-  edenSize,
-  setEdenSize,
   tenureThreshold,
   setTenureThreshold,
 }: AppSidebarProps) {
@@ -100,43 +96,24 @@ export function AppSidebar({
               </div>
 
               {/* Configuraciones específicas del Generational GC */}
-              {collectorType === 'generational' && setEdenSize && setTenureThreshold && edenSize !== undefined && tenureThreshold !== undefined && (
-                <>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      {!isCollapsed && "Tamaño Eden (%)"}
-                    </label>
-                    <select 
-                      value={edenSize} 
-                      onChange={(e) => setEdenSize(Number(e.target.value))}
-                      disabled={isRunning}
-                      className="w-full p-2 rounded border bg-background text-foreground text-sm"
-                      title="Tamaño Eden Space"
-                    >
-                      <option value={0.1}>10%</option>
-                      <option value={0.15}>15%</option>
-                      <option value={0.2}>20%</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      {!isCollapsed && "Umbral Tenured"}
-                    </label>
-                    <select 
-                      value={tenureThreshold} 
-                      onChange={(e) => setTenureThreshold(Number(e.target.value))}
-                      disabled={isRunning}
-                      className="w-full p-2 rounded border bg-background text-foreground text-sm"
-                      title="Ciclos para mover a Tenured"
-                    >
-                      <option value={2}>2 ciclos</option>
-                      <option value={3}>3 ciclos</option>
-                      <option value={4}>4 ciclos</option>
-                      <option value={5}>5 ciclos</option>
-                    </select>
-                  </div>
-                </>
+              {collectorType === 'generational' && setTenureThreshold && tenureThreshold !== undefined && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    {!isCollapsed && "Umbral Tenured"}
+                  </label>
+                  <select 
+                    value={tenureThreshold} 
+                    onChange={(e) => setTenureThreshold(Number(e.target.value))}
+                    disabled={isRunning}
+                    className="w-full p-2 rounded border bg-background text-foreground text-sm"
+                    title="Ciclos para mover a Tenured"
+                  >
+                    <option value={2}>2 ciclos</option>
+                    <option value={3}>3 ciclos</option>
+                    <option value={4}>4 ciclos</option>
+                    <option value={5}>5 ciclos</option>
+                  </select>
+                </div>
               )}
             </div>
           </SidebarGroupContent>

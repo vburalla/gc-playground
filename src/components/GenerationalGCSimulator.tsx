@@ -29,7 +29,7 @@ export const GenerationalGCSimulator = () => {
   const [gridSize, setGridSize] = useState(15);
   const [speed, setSpeed] = useState(600);
   const [activeSurvivorSpace, setActiveSurvivorSpace] = useState<'survivor-from' | 'survivor-to'>('survivor-from');
-  const [edenSize, setEdenSize] = useState(0.15); // Eden entre 10% y 20%
+  
   const [tenureThreshold, setTenureThreshold] = useState(3); // cycles to move to tenured
 
   // Initialize heap with four spaces
@@ -42,9 +42,9 @@ export const GenerationalGCSimulator = () => {
     const newHeap: MemoryCell[] = [];
     
     // Calculate columns for each zone (vertical distribution)
-    const edenCols = Math.floor(gridSize * Math.min(Math.max(edenSize, 0.1), 0.2));
-    const tenuredCols = Math.floor(gridSize * 0.4); // 40% for tenured
-    const survivorCols = gridSize - edenCols - tenuredCols;
+    const edenCols = Math.max(1, Math.floor(gridSize * 0.2)); // 20% Eden (fixed)
+    const tenuredCols = Math.max(1, Math.floor(gridSize * 0.5)); // 50% Tenured (fixed)
+    const survivorCols = Math.max(1, gridSize - edenCols - tenuredCols);
     const survivorRows = Math.floor(gridSize / 2); // Half rows for each survivor space
     
     // Initialize all cells first
@@ -328,9 +328,9 @@ export const GenerationalGCSimulator = () => {
     const row = Math.floor(index / gridSize);
     const col = index % gridSize;
     
-    const edenCols = Math.floor(gridSize * Math.min(Math.max(edenSize, 0.1), 0.2));
-    const tenuredCols = Math.floor(gridSize * 0.4);
-    const survivorCols = gridSize - edenCols - tenuredCols;
+    const edenCols = Math.max(1, Math.floor(gridSize * 0.2));
+    const tenuredCols = Math.max(1, Math.floor(gridSize * 0.5));
+    const survivorCols = Math.max(1, gridSize - edenCols - tenuredCols);
     const survivorRows = Math.floor(gridSize / 2);
     
     let borderClasses = "border";
@@ -375,9 +375,9 @@ export const GenerationalGCSimulator = () => {
     const row = Math.floor(index / gridSize);
     const col = index % gridSize;
     
-    const edenCols = Math.floor(gridSize * Math.min(Math.max(edenSize, 0.1), 0.2));
-    const tenuredCols = Math.floor(gridSize * 0.4);
-    const survivorCols = gridSize - edenCols - tenuredCols;
+    const edenCols = Math.max(1, Math.floor(gridSize * 0.2));
+    const tenuredCols = Math.max(1, Math.floor(gridSize * 0.5));
+    const survivorCols = Math.max(1, gridSize - edenCols - tenuredCols);
     const survivorRows = Math.floor(gridSize / 2);
     
     // Show labels at the top of each zone
@@ -391,6 +391,10 @@ export const GenerationalGCSimulator = () => {
     
     return "";
   };
+
+  const edenCols = Math.max(1, Math.floor(gridSize * 0.2));
+  const tenuredCols = Math.max(1, Math.floor(gridSize * 0.5));
+  const survivorCols = Math.max(1, gridSize - edenCols - tenuredCols);
 
   return (
     <div className="flex min-h-screen w-full">
@@ -406,8 +410,6 @@ export const GenerationalGCSimulator = () => {
         currentStep={currentStep}
         gcCycles={gcCycles}
         phase={phase}
-        edenSize={edenSize}
-        setEdenSize={setEdenSize}
         tenureThreshold={tenureThreshold}
         setTenureThreshold={setTenureThreshold}
         collectorType="generational"
@@ -427,7 +429,7 @@ export const GenerationalGCSimulator = () => {
           </CardHeader>
           <CardContent>
             <div 
-              className="grid gap-0 mx-auto w-fit p-4 bg-muted/20 rounded-lg"
+              className="relative grid gap-0 mx-auto w-fit p-4 bg-muted/20 rounded-lg"
               style={{ 
                 gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
                 maxWidth: '90vw',
@@ -461,6 +463,50 @@ export const GenerationalGCSimulator = () => {
                   </div>
                 );
               })}
+
+              {/* Zone overlays (clear colored boxes) */}
+              <div className="pointer-events-none absolute inset-0 z-20">
+                {/* Eden */}
+                <div
+                  className="absolute border-4 border-primary rounded-sm"
+                  style={{
+                    left: `0%`,
+                    top: `0%`,
+                    width: `${(edenCols / gridSize) * 100}%`,
+                    height: `100%`,
+                  }}
+                />
+                {/* Survivor From */}
+                <div
+                  className="absolute border-4 border-accent rounded-sm"
+                  style={{
+                    left: `${(edenCols / gridSize) * 100}%`,
+                    top: `0%`,
+                    width: `${(survivorCols / gridSize) * 100}%`,
+                    height: `50%`,
+                  }}
+                />
+                {/* Survivor To */}
+                <div
+                  className="absolute border-4 border-ring rounded-sm"
+                  style={{
+                    left: `${(edenCols / gridSize) * 100}%`,
+                    top: `50%`,
+                    width: `${(survivorCols / gridSize) * 100}%`,
+                    height: `50%`,
+                  }}
+                />
+                {/* Tenured */}
+                <div
+                  className="absolute border-4 border-secondary rounded-sm"
+                  style={{
+                    left: `${((edenCols + survivorCols) / gridSize) * 100}%`,
+                    top: `0%`,
+                    width: `${(tenuredCols / gridSize) * 100}%`,
+                    height: `100%`,
+                  }}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
