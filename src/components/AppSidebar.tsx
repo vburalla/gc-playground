@@ -79,11 +79,11 @@ export function AppSidebar({
                   className="w-full p-2 rounded border bg-background text-foreground text-sm"
                   title="Velocidad"
                 >
-                  <option value={500}>Muy Rápida</option>
-                  <option value={1000}>Rápida</option>
-                  <option value={1500}>Normal</option>
-                  <option value={2000}>Lenta</option>
-                  <option value={3000}>Muy Lenta</option>
+                  <option value={200}>Muy Rápida</option>
+                  <option value={400}>Rápida</option>
+                  <option value={600}>Normal</option>
+                  <option value={800}>Lenta</option>
+                  <option value={1200}>Muy Lenta</option>
                 </select>
               </div>
             </div>

@@ -25,7 +25,7 @@ export const GCSimulator = () => {
   const [gcCycles, setGcCycles] = useState(0);
   const [phase, setPhase] = useState<'allocating' | 'marking' | 'sweeping' | 'complete'>('allocating');
   const [gridSize, setGridSize] = useState(15);
-  const [speed, setSpeed] = useState(1000); // milliseconds
+  const [speed, setSpeed] = useState(600); // milliseconds
 
   // Initialize heap
   useEffect(() => {
@@ -55,11 +55,10 @@ export const GCSimulator = () => {
       
       if (freeCells.length === 0) return newHeap;
 
-      // Allocate 3-5 new objects randomly
+      // Allocate 3-5 new objects sequentially (top to bottom, left to right)
       const allocateCount = Math.min(Math.floor(Math.random() * 3) + 3, freeCells.length);
       for (let i = 0; i < allocateCount; i++) {
-        const randomIndex = Math.floor(Math.random() * freeCells.length);
-        const cellToAllocate = freeCells.splice(randomIndex, 1)[0];
+        const cellToAllocate = freeCells[i]; // Take first available cell instead of random
         if (cellToAllocate) {
           newHeap[cellToAllocate.id].state = CellState.REFERENCED;
         }
@@ -209,18 +208,19 @@ export const GCSimulator = () => {
         </header>
 
         {/* Main Content */}
-        <div className="p-6 h-[calc(100vh-4rem)] flex items-center justify-center">
-          <Card className="w-full max-w-5xl">
-            <CardHeader>
-              <CardTitle className="text-center text-xl">
+        <div className="p-4 h-[calc(100vh-4rem)] flex items-center justify-center">
+          <Card className="w-full max-w-2xl lg:max-w-3xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-center text-lg">
                 {phase === 'allocating' ? 'Allocating' : 'Heap'}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex justify-center">
+            <CardContent className="flex justify-center p-4">
               <div 
-                className="grid gap-1 w-full max-w-4xl"
+                className="grid gap-1 w-full"
                 style={{ 
                   gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
+                  maxWidth: `min(70vw, ${Math.min(gridSize * 2.5, 40)}rem)`
                 }}
               >
                 {heap.map((cell) => (
@@ -231,7 +231,7 @@ export const GCSimulator = () => {
                       transition-all duration-300 ${getCellClassName(cell)}
                     `}
                     style={{ 
-                      fontSize: gridSize > 18 ? '0.625rem' : gridSize > 15 ? '0.75rem' : '0.875rem'
+                      fontSize: gridSize > 18 ? '0.5rem' : gridSize > 15 ? '0.625rem' : '0.75rem'
                     }}
                   >
                     {cell.state === CellState.SURVIVED && cell.survivedCycles > 0 
