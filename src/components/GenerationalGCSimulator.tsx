@@ -156,7 +156,7 @@ export const GenerationalGCSimulator = () => {
       const markedEdenCells = newHeap.filter(cell => 
         cell.space === 'eden' && cell.state === CellState.MARKED
       );
-      
+
       const availableSurvivorCells = newHeap.filter(cell => 
         cell.space === activeSurvivorSpace && cell.state === CellState.FREE
       );
@@ -165,12 +165,19 @@ export const GenerationalGCSimulator = () => {
         cell.space === 'tenured' && cell.state === CellState.FREE
       );
 
+      // Enforce at least 65% FREE in active Survivor
+      const totalActiveSurvivor = newHeap.filter(cell => cell.space === activeSurvivorSpace).length;
+      const minFreeRatio = 0.65;
+      const maxOccupiedAllowed = Math.floor(totalActiveSurvivor * (1 - minFreeRatio));
+      const currentOccupied = newHeap.filter(cell => cell.space === activeSurvivorSpace && cell.state !== CellState.FREE).length;
+      let remainingSurvivorCapacity = Math.max(0, maxOccupiedAllowed - currentOccupied);
+
       let survivorIndex = 0;
       let tenuredIndex = 0;
 
       markedEdenCells.forEach(markedCell => {
-        if (survivorIndex < availableSurvivorCells.length) {
-          // Hay espacio en survivor - mover ahí
+        if (survivorIndex < availableSurvivorCells.length && remainingSurvivorCapacity > 0) {
+          // Hay capacidad en Survivor respetando el 65% libre
           const targetCell = availableSurvivorCells[survivorIndex++];
           newHeap[targetCell.id] = {
             state: CellState.COPYING,
@@ -178,8 +185,9 @@ export const GenerationalGCSimulator = () => {
             id: targetCell.id,
             space: activeSurvivorSpace
           };
+          remainingSurvivorCapacity--;
         } else if (tenuredIndex < availableTenuredCells.length) {
-          // Survivor lleno - mover directamente a tenured
+          // Overflow a Tenured
           const targetCell = availableTenuredCells[tenuredIndex++];
           newHeap[targetCell.id] = {
             state: CellState.COPYING,
@@ -188,7 +196,7 @@ export const GenerationalGCSimulator = () => {
             space: 'tenured'
           };
         }
-        // Si no hay espacio ni en survivor ni en tenured, el objeto se pierde (no debería pasar)
+        // Si no hay espacio ni en survivor (por ratio) ni en tenured, el objeto se pierde (no debería pasar)
       });
 
       // Clear Eden space
@@ -219,13 +227,20 @@ export const GenerationalGCSimulator = () => {
         cell.space === 'tenured' && cell.state === CellState.FREE
       );
 
+      // Enforce at least 65% FREE in active Survivor
+      const totalActiveSurvivor = newHeap.filter(cell => cell.space === activeSurvivorSpace).length;
+      const minFreeRatio = 0.65;
+      const maxOccupiedAllowed = Math.floor(totalActiveSurvivor * (1 - minFreeRatio));
+      const currentOccupied = newHeap.filter(cell => cell.space === activeSurvivorSpace && cell.state !== CellState.FREE).length;
+      let remainingSurvivorCapacity = Math.max(0, maxOccupiedAllowed - currentOccupied);
+
       let activeIndex = 0;
       let tenuredIndex = 0;
 
       sourceMarked.forEach(markedCell => {
         const nextCycles = (markedCell.survivedCycles || 0) + 1;
         if (nextCycles >= tenureThreshold && tenuredIndex < tenuredCells.length) {
-          // Move to tenured space, reset counter so it disappears
+          // Promoción a Tenured si alcanza el umbral
           const targetCell = tenuredCells[tenuredIndex++];
           newHeap[targetCell.id] = {
             state: CellState.COPYING,
@@ -233,14 +248,24 @@ export const GenerationalGCSimulator = () => {
             id: targetCell.id,
             space: 'tenured'
           };
-        } else if (activeIndex < availableActiveCells.length) {
-          // Move to active survivor space (append after Eden-moved)
+        } else if (activeIndex < availableActiveCells.length && remainingSurvivorCapacity > 0) {
+          // Mover a Survivor respetando el 65% libre
           const targetCell = availableActiveCells[activeIndex++];
           newHeap[targetCell.id] = {
             state: CellState.COPYING,
             survivedCycles: nextCycles,
             id: targetCell.id,
             space: activeSurvivorSpace
+          };
+          remainingSurvivorCapacity--;
+        } else if (tenuredIndex < tenuredCells.length) {
+          // Overflow a Tenured si Survivor alcanzó su capacidad (por ratio) o no hay huecos
+          const targetCell = tenuredCells[tenuredIndex++];
+          newHeap[targetCell.id] = {
+            state: CellState.COPYING,
+            survivedCycles: 0,
+            id: targetCell.id,
+            space: 'tenured'
           };
         }
       });
