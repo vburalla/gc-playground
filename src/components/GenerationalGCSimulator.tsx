@@ -124,6 +124,16 @@ export const GenerationalGCSimulator = () => {
   const simulateMarkPhase = () => {
     setHeap(prev => {
       const newHeap = [...prev];
+      // Randomly dereference some tenured objects to show deallocation
+      newHeap.forEach(cell => {
+        if (cell.space === 'tenured' && cell.state === CellState.SURVIVED) {
+          if (Math.random() < 0.1) {
+            cell.state = CellState.DEREFERENCED;
+            cell.survivedCycles = 0;
+          }
+        }
+      });
+      // Mark reachable/live objects
       newHeap.forEach(cell => {
         if (cell.state === CellState.REFERENCED || cell.survivedCycles > 0) {
           cell.state = CellState.MARKED;
@@ -140,9 +150,8 @@ export const GenerationalGCSimulator = () => {
         cell.space === 'eden' && cell.state === CellState.MARKED
       );
       
-      const inactiveSurvivorSpace = activeSurvivorSpace === 'survivor-from' ? 'survivor-to' : 'survivor-from';
       const availableSurvivorCells = newHeap.filter(cell => 
-        cell.space === inactiveSurvivorSpace && cell.state === CellState.FREE
+        cell.space === activeSurvivorSpace && cell.state === CellState.FREE
       );
 
       let survivorIndex = 0;
@@ -151,9 +160,9 @@ export const GenerationalGCSimulator = () => {
           const targetCell = availableSurvivorCells[survivorIndex++];
           newHeap[targetCell.id] = {
             state: CellState.COPYING,
-            survivedCycles: markedCell.survivedCycles + 1,
+            survivedCycles: (markedCell.survivedCycles || 0) + 1,
             id: targetCell.id,
-            space: inactiveSurvivorSpace
+            space: activeSurvivorSpace
           };
         }
       });
@@ -173,48 +182,49 @@ export const GenerationalGCSimulator = () => {
   const simulateCopyBetweenSurvivors = () => {
     setHeap(prev => {
       const newHeap = [...prev];
-      const activeSurvivor = newHeap.filter(cell => 
-        cell.space === activeSurvivorSpace && cell.state === CellState.MARKED
+      const sourceSpace = activeSurvivorSpace === 'survivor-from' ? 'survivor-to' : 'survivor-from';
+      const sourceMarked = newHeap.filter(cell => 
+        cell.space === sourceSpace && cell.state === CellState.MARKED
       );
       
-      const inactiveSurvivorSpace = activeSurvivorSpace === 'survivor-from' ? 'survivor-to' : 'survivor-from';
-      const availableCells = newHeap.filter(cell => 
-        cell.space === inactiveSurvivorSpace && cell.state === CellState.FREE
+      const availableActiveCells = newHeap.filter(cell => 
+        cell.space === activeSurvivorSpace && cell.state === CellState.FREE
       );
       
       const tenuredCells = newHeap.filter(cell => 
         cell.space === 'tenured' && cell.state === CellState.FREE
       );
 
-      let survivorIndex = 0;
+      let activeIndex = 0;
       let tenuredIndex = 0;
 
-      activeSurvivor.forEach(markedCell => {
-        if (markedCell.survivedCycles >= tenureThreshold && tenuredIndex < tenuredCells.length) {
-          // Move to tenured space
+      sourceMarked.forEach(markedCell => {
+        const nextCycles = (markedCell.survivedCycles || 0) + 1;
+        if (nextCycles >= tenureThreshold && tenuredIndex < tenuredCells.length) {
+          // Move to tenured space, reset counter so it disappears
           const targetCell = tenuredCells[tenuredIndex++];
           newHeap[targetCell.id] = {
             state: CellState.COPYING,
-            survivedCycles: markedCell.survivedCycles + 1,
+            survivedCycles: 0,
             id: targetCell.id,
             space: 'tenured'
           };
-        } else if (survivorIndex < availableCells.length) {
-          // Move to other survivor space
-          const targetCell = availableCells[survivorIndex++];
+        } else if (activeIndex < availableActiveCells.length) {
+          // Move to active survivor space (append after Eden-moved)
+          const targetCell = availableActiveCells[activeIndex++];
           newHeap[targetCell.id] = {
             state: CellState.COPYING,
-            survivedCycles: markedCell.survivedCycles + 1,
+            survivedCycles: nextCycles,
             id: targetCell.id,
-            space: inactiveSurvivorSpace
+            space: activeSurvivorSpace
           };
         }
       });
 
-      // Clear active survivor space
+      // Mark the source (inactive) survivor space as deallocated to visualize cleaning
       newHeap.forEach(cell => {
-        if (cell.space === activeSurvivorSpace) {
-          cell.state = CellState.FREE;
+        if (cell.space === sourceSpace) {
+          cell.state = CellState.DEREFERENCED;
           cell.survivedCycles = 0;
         }
       });
@@ -229,6 +239,9 @@ export const GenerationalGCSimulator = () => {
       newHeap.forEach(cell => {
         if (cell.state === CellState.COPYING) {
           cell.state = CellState.SURVIVED;
+        } else if (cell.state === CellState.DEREFERENCED && (cell.space === 'survivor-from' || cell.space === 'survivor-to' || cell.space === 'tenured')) {
+          // Clean deallocated positions each cycle
+          cell.state = CellState.FREE;
         }
       });
       return newHeap;
@@ -314,36 +327,44 @@ export const GenerationalGCSimulator = () => {
     const row = Math.floor(index / gridSize);
     const col = index % gridSize;
     
-    const edenCols = Math.floor(gridSize * edenSize);
+    const edenCols = Math.floor(gridSize * Math.min(Math.max(edenSize, 0.1), 0.2));
     const tenuredCols = Math.floor(gridSize * 0.4);
     const survivorCols = gridSize - edenCols - tenuredCols;
     const survivorRows = Math.floor(gridSize / 2);
     
     let borderClasses = "border";
     
-    // Eden Space borders (yellow)
+    // Eden Space borders
     if (cell.space === 'eden') {
       borderClasses += " border-primary";
+      if (col === 0) borderClasses += " border-l-4"; // Left border of Eden
       if (col === edenCols - 1) borderClasses += " border-r-4"; // Right border of Eden
+      if (row === 0) borderClasses += " border-t-4"; // Top border of Eden
+      if (row === gridSize - 1) borderClasses += " border-b-4"; // Bottom border of Eden
     }
-    // Survivor From borders (orange)
+    // Survivor From borders
     else if (cell.space === 'survivor-from') {
       borderClasses += " border-accent";
       if (col === edenCols) borderClasses += " border-l-4"; // Left border of Survivor
       if (col === edenCols + survivorCols - 1) borderClasses += " border-r-4"; // Right border of Survivor
-      if (row === survivorRows - 1) borderClasses += " border-b-4"; // Bottom border between From/To
+      if (row === 0) borderClasses += " border-t-4"; // Top border of Survivor area
+      if (row === survivorRows - 1) borderClasses += " border-b-4"; // Divider between From/To
     }
-    // Survivor To borders (cyan)
+    // Survivor To borders
     else if (cell.space === 'survivor-to') {
       borderClasses += " border-ring";
       if (col === edenCols) borderClasses += " border-l-4"; // Left border of Survivor
       if (col === edenCols + survivorCols - 1) borderClasses += " border-r-4"; // Right border of Survivor
-      if (row === survivorRows) borderClasses += " border-t-4"; // Top border between From/To
+      if (row === survivorRows) borderClasses += " border-t-4"; // Divider between From/To
+      if (row === gridSize - 1) borderClasses += " border-b-4"; // Bottom border of Survivor area
     }
-    // Tenured borders (purple)
+    // Tenured borders
     else if (cell.space === 'tenured') {
       borderClasses += " border-secondary";
       if (col === edenCols + survivorCols) borderClasses += " border-l-4"; // Left border of Tenured
+      if (col === gridSize - 1) borderClasses += " border-r-4"; // Right border of Tenured
+      if (row === 0) borderClasses += " border-t-4"; // Top border of Tenured
+      if (row === gridSize - 1) borderClasses += " border-b-4"; // Bottom border of Tenured
     }
     
     return borderClasses;
@@ -353,7 +374,7 @@ export const GenerationalGCSimulator = () => {
     const row = Math.floor(index / gridSize);
     const col = index % gridSize;
     
-    const edenCols = Math.floor(gridSize * edenSize);
+    const edenCols = Math.floor(gridSize * Math.min(Math.max(edenSize, 0.1), 0.2));
     const tenuredCols = Math.floor(gridSize * 0.4);
     const survivorCols = gridSize - edenCols - tenuredCols;
     const survivorRows = Math.floor(gridSize / 2);
