@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import { AppSidebar } from "./AppSidebar";
+import { StopTheWorldIndicator } from "./StopTheWorldIndicator";
 
 export enum CellState {
   FREE = "free",
@@ -206,6 +207,11 @@ export const GCSimulator = () => {
         onNextStep={nextStep}
         onReset={initializeHeap}
         collectorType="non-moving"
+      />
+
+      <StopTheWorldIndicator 
+        phase={phase}
+        isVisible={['marking', 'sweeping'].includes(phase)}
       />
 
       <main className="flex-1 bg-gradient-bg">

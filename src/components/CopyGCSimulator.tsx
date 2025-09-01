@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import { AppSidebar } from "./AppSidebar";
+import { StopTheWorldIndicator } from "./StopTheWorldIndicator";
 
 export enum CellState {
   FREE = "free",
@@ -289,6 +290,11 @@ export const CopyGCSimulator = () => {
         onReset={initializeHeap}
         collectorType="copy"
         activeSpace={activeSpace}
+      />
+
+      <StopTheWorldIndicator 
+        phase={phase}
+        isVisible={['marking', 'copying'].includes(phase)}
       />
 
       <main className="flex-1 bg-gradient-bg">

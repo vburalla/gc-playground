@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import { AppSidebar } from "./AppSidebar";
+import { StopTheWorldIndicator } from "./StopTheWorldIndicator";
 
 export enum CellState {
   FREE = "free",
@@ -514,9 +515,6 @@ export const GenerationalGCSimulator = () => {
   const tenuredCols = Math.max(1, Math.floor(gridSize * 0.5));
   const survivorCols = Math.max(1, gridSize - edenCols - tenuredCols);
 
-  // Determine if we should show Stop the World indicator
-  const isStopTheWorld = ['marking', 'copying-survivor', 'copying-tenured', 'major-gc-marking', 'major-gc-compacting'].includes(phase);
-
   return (
     <div className="flex min-h-screen w-full">
       <AppSidebar 
@@ -536,81 +534,62 @@ export const GenerationalGCSimulator = () => {
         collectorType="generational"
       />
       
+      <StopTheWorldIndicator 
+        phase={phase}
+        isVisible={['marking', 'copying-survivor', 'copying-tenured', 'major-gc-marking', 'major-gc-compacting'].includes(phase)}
+      />
+      
       <main className="flex-1 p-6">
         <div className="flex items-center gap-2 mb-6">
           <SidebarTrigger />
           <h1 className="text-2xl font-bold">Generational Garbage Collector</h1>
         </div>
         
-        <div className="flex gap-6 items-start">
-          <Card className="flex-1">
-            <CardHeader>
-              <CardTitle className="text-center">
-                Memoria del Heap - Generational GC
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div 
-                className="grid gap-0 mx-auto w-fit p-4 bg-muted/20 rounded-lg"
-                style={{ 
-                  gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-                  maxWidth: '90vw',
-                  aspectRatio: '1'
-                }}
-              >
-                {heap.map((cell, index) => {
-                  const label = getSpaceLabel(index);
-                  const borderClasses = getCellBorder(cell, index);
-                  return (
-                    <div key={cell.id} className="relative">
-                      {label && (
-                        <div className="absolute -top-7 left-0 text-xs font-bold text-foreground whitespace-nowrap z-10 bg-background px-2 py-1 rounded shadow-sm border-2 border-current">
-                          {label}
-                        </div>
-                      )}
-                      <div
-                        className={`
-                          aspect-square transition-all duration-300 flex items-center justify-center text-xs font-semibold
-                          ${getCellColor(cell)} ${borderClasses}
-                          hover:scale-110 cursor-pointer
-                        `}
-                        style={{
-                          minWidth: `${Math.max(20, 600/gridSize)}px`,
-                          minHeight: `${Math.max(20, 600/gridSize)}px`
-                        }}
-                        title={`Celda ${cell.id}: ${cell.state} (Ciclos: ${cell.survivedCycles}) - ${cell.space}`}
-                      >
-                        {cell.survivedCycles > 0 ? cell.survivedCycles : ''}
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-center">
+              Memoria del Heap - Generational GC
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div 
+              className="grid gap-0 mx-auto w-fit p-4 bg-muted/20 rounded-lg"
+              style={{ 
+                gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+                maxWidth: '90vw',
+                aspectRatio: '1'
+              }}
+            >
+              {heap.map((cell, index) => {
+                const label = getSpaceLabel(index);
+                const borderClasses = getCellBorder(cell, index);
+                return (
+                  <div key={cell.id} className="relative">
+                    {label && (
+                      <div className="absolute -top-7 left-0 text-xs font-bold text-foreground whitespace-nowrap z-10 bg-background px-2 py-1 rounded shadow-sm border-2 border-current">
+                        {label}
                       </div>
+                    )}
+                    <div
+                      className={`
+                        aspect-square transition-all duration-300 flex items-center justify-center text-xs font-semibold
+                        ${getCellColor(cell)} ${borderClasses}
+                        hover:scale-110 cursor-pointer
+                      `}
+                      style={{
+                        minWidth: `${Math.max(20, 600/gridSize)}px`,
+                        minHeight: `${Math.max(20, 600/gridSize)}px`
+                      }}
+                      title={`Celda ${cell.id}: ${cell.state} (Ciclos: ${cell.survivedCycles}) - ${cell.space}`}
+                    >
+                      {cell.survivedCycles > 0 ? cell.survivedCycles : ''}
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Stop the World Indicator */}
-          {isStopTheWorld && (
-            <Card className="w-80">
-              <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-                <div className="animate-pulse bg-destructive/10 rounded-lg p-6 border-2 border-destructive/30">
-                  <img 
-                    src="/lovable-uploads/6cecc884-41f4-42ac-8c38-a755a5b8c694.png" 
-                    alt="Stop the World"
-                    className="w-32 h-32 mx-auto mb-4"
-                  />
-                  <div className="text-destructive font-bold text-xl mb-2">STOP THE WORLD</div>
-                  <div className="text-sm text-muted-foreground mb-2">
-                    Aplicación pausada durante GC
                   </div>
-                  <div className="text-xs text-muted-foreground bg-background px-3 py-1 rounded">
-                    Fase actual: <span className="font-semibold">{phase}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
