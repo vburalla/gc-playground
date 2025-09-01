@@ -25,7 +25,7 @@ export const GenerationalGCSimulator = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [gcCycles, setGcCycles] = useState(0);
-  const [phase, setPhase] = useState<'allocating' | 'marking' | 'copying-survivor' | 'copying-tenured' | 'swapping' | 'complete'>('allocating');
+  const [phase, setPhase] = useState<'allocating' | 'marking' | 'copying-survivor' | 'copying-tenured' | 'swapping' | 'major-gc-marking' | 'major-gc-compacting' | 'complete'>('allocating');
   const [gridSize, setGridSize] = useState(15);
   const [speed, setSpeed] = useState(600);
   const [activeSurvivorSpace, setActiveSurvivorSpace] = useState<'survivor-from' | 'survivor-to'>('survivor-from');
@@ -239,11 +239,59 @@ export const GenerationalGCSimulator = () => {
       newHeap.forEach(cell => {
         if (cell.state === CellState.COPYING) {
           cell.state = CellState.SURVIVED;
-        } else if (cell.state === CellState.DEREFERENCED && (cell.space === 'survivor-from' || cell.space === 'survivor-to' || cell.space === 'tenured')) {
-          // Clean deallocated positions each cycle
+        } else if (cell.state === CellState.DEREFERENCED && (cell.space === 'survivor-from' || cell.space === 'survivor-to')) {
+          // Clean deallocated positions each cycle in Survivor spaces only
           cell.state = CellState.FREE;
         }
+        // NOTE: Tenured deallocated cells are NOT cleaned here - they accumulate until Major GC
       });
+      return newHeap;
+    });
+  };
+
+  const simulateMajorGCMarking = () => {
+    setHeap(prev => {
+      const newHeap = [...prev];
+      // Mark live objects in Tenured space
+      newHeap.forEach(cell => {
+        if (cell.space === 'tenured' && cell.state === CellState.SURVIVED) {
+          // Randomly dereference some tenured to simulate garbage
+          if (Math.random() < 0.2) {
+            cell.state = CellState.DEREFERENCED;
+          } else {
+            cell.state = CellState.MARKED;
+          }
+        }
+      });
+      return newHeap;
+    });
+  };
+
+  const simulateMajorGCCompacting = () => {
+    setHeap(prev => {
+      const newHeap = [...prev];
+      const tenuredCells = newHeap.filter(cell => cell.space === 'tenured');
+      const markedTenured = tenuredCells.filter(cell => cell.state === CellState.MARKED);
+      
+      // Clear all tenured space first
+      tenuredCells.forEach(cell => {
+        cell.state = CellState.FREE;
+        cell.survivedCycles = 0;
+      });
+      
+      // Compact marked objects to the beginning of Tenured space
+      markedTenured.forEach((markedCell, index) => {
+        if (index < tenuredCells.length) {
+          const targetCell = tenuredCells[index];
+          newHeap[targetCell.id] = {
+            state: CellState.SURVIVED,
+            survivedCycles: 0, // Reset counter in Tenured (as specified)
+            id: targetCell.id,
+            space: 'tenured'
+          };
+        }
+      });
+      
       return newHeap;
     });
   };
@@ -261,12 +309,36 @@ export const GenerationalGCSimulator = () => {
       if (edenHasSpace) {
         simulateAllocation();
       } else {
-        // Swap Survivor ACTIVE space BEFORE marking (requested behavior)
+        // Check if Tenured is full (no free space) before Minor GC
+        const tenuredFreeSpace = heap.filter(cell => 
+          cell.space === 'tenured' && cell.state === CellState.FREE
+        ).length;
+        
+        if (tenuredFreeSpace === 0) {
+          // Tenured is full - trigger Major GC
+          toast.info(`Major GC iniciado - Tenured Space lleno`);
+          setPhase('major-gc-marking');
+          return;
+        }
+
+        // Normal Minor GC flow
         setActiveSurvivorSpace(prev => (prev === 'survivor-from' ? 'survivor-to' : 'survivor-from'));
         setGcCycles(prev => prev + 1);
         toast.info(`Iniciando ciclo GC #${gcCycles + 1}: swap de Survivor y fase de marcado`);
         setPhase('marking');
       }
+    } else if (phase === 'major-gc-marking') {
+      simulateMajorGCMarking();
+      setTimeout(() => {
+        setPhase('major-gc-compacting');
+        toast.info("Major GC: Compactando Tenured Space");
+      }, 1500);
+    } else if (phase === 'major-gc-compacting') {
+      simulateMajorGCCompacting();
+      setTimeout(() => {
+        setPhase('allocating');
+        toast.success("Major GC completado - Tenured Space compactado");
+      }, 1200);
     } else if (phase === 'marking') {
       simulateMarkPhase();
       // Pause to visualize MARKED cells
