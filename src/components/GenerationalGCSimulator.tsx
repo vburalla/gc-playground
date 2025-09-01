@@ -501,7 +501,7 @@ export const GenerationalGCSimulator = () => {
           </CardHeader>
           <CardContent>
             <div 
-              className="relative grid gap-0 mx-auto w-fit p-4 bg-muted/20 rounded-lg"
+              className="grid gap-0 mx-auto w-fit p-4 bg-muted/20 rounded-lg"
               style={{ 
                 gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
                 maxWidth: '90vw',
@@ -535,50 +535,6 @@ export const GenerationalGCSimulator = () => {
                   </div>
                 );
               })}
-
-              {/* Zone overlays (clear colored boxes) */}
-              <div className="pointer-events-none absolute inset-0 z-20">
-                {/* Eden */}
-                <div
-                  className="absolute border-4 border-primary rounded-sm"
-                  style={{
-                    left: `0%`,
-                    top: `0%`,
-                    width: `${(edenCols / gridSize) * 100}%`,
-                    height: `100%`,
-                  }}
-                />
-                {/* Survivor From */}
-                <div
-                  className="absolute border-4 border-accent rounded-sm"
-                  style={{
-                    left: `${(edenCols / gridSize) * 100}%`,
-                    top: `0%`,
-                    width: `${(survivorCols / gridSize) * 100}%`,
-                    height: `50%`,
-                  }}
-                />
-                {/* Survivor To */}
-                <div
-                  className="absolute border-4 border-ring rounded-sm"
-                  style={{
-                    left: `${(edenCols / gridSize) * 100}%`,
-                    top: `50%`,
-                    width: `${(survivorCols / gridSize) * 100}%`,
-                    height: `50%`,
-                  }}
-                />
-                {/* Tenured */}
-                <div
-                  className="absolute border-4 border-secondary rounded-sm"
-                  style={{
-                    left: `${((edenCols + survivorCols) / gridSize) * 100}%`,
-                    top: `0%`,
-                    width: `${(tenuredCols / gridSize) * 100}%`,
-                    height: `100%`,
-                  }}
-                />
-              </div>
             </div>
           </CardContent>
         </Card>
