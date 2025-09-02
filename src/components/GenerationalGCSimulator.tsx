@@ -556,8 +556,8 @@ export const GenerationalGCSimulator = () => {
         </header>
 
         {/* Main Content */}
-        <div className="p-4 h-[calc(100dvh-var(--nav-h)-4rem)] flex items-center justify-center overflow-hidden">
-          <Card className="w-full max-w-6xl h-full flex flex-col">
+        <div className="p-4 h-[calc(100dvh-var(--nav-h)-4rem)] flex items-center justify-center">
+          <Card className="w-full max-w-2xl lg:max-w-3xl">
             <CardHeader className="pb-4 flex-shrink-0">
               <CardTitle className="text-center text-lg">
                 {phase === 'allocating' ? 'Allocating' : 
@@ -569,8 +569,8 @@ export const GenerationalGCSimulator = () => {
                  'Generational Heap'}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col overflow-hidden p-4">
-              <div className="flex-1 flex items-center justify-center overflow-hidden">
+            <CardContent className="flex justify-center p-4">
+              <div className="flex items-center justify-center pt-6">
                 <div 
                   className="grid gap-1 w-full mx-auto"
                   style={{ 
