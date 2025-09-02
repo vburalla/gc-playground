@@ -3,10 +3,15 @@ import { Button } from "@/components/ui/button";
 
 export const Navigation = () => {
   return (
-    <header className="w-full bg-background border-b border-border shadow-sm">
+    <header className="w-full bg-gradient-bg border-b border-border/50 shadow-lg backdrop-blur-sm">
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-foreground">Garbage Collector Simulator</h1>
+          <div className="flex-1 text-center">
+            <h1 className="text-2xl font-bold text-foreground bg-gradient-to-r from-primary to-ring bg-clip-text text-transparent">
+              Garbage Collector Simulator
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">Interactive Memory Management Demo</p>
+          </div>
           <nav className="flex gap-3">
             <Button asChild size="sm">
               <NavLink 

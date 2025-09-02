@@ -431,16 +431,22 @@ export const GenerationalGCSimulator = () => {
   }, [isRunning, phase, heap, speed]);
 
   const getCellColor = (cell: MemoryCell) => {
-    const baseColors = {
-      [CellState.FREE]: "bg-gc-free-cell",
-      [CellState.REFERENCED]: "bg-gc-referenced-cell",
-      [CellState.DEREFERENCED]: "bg-gc-dereferenced-cell", 
-      [CellState.MARKED]: "bg-gc-marked-cell",
-      [CellState.SURVIVED]: "bg-gc-survived-cell",
-      [CellState.COPYING]: "bg-accent"
-    };
-
-    return baseColors[cell.state];
+    switch (cell.state) {
+      case CellState.FREE:
+        return "bg-gc-free-cell text-gc-free-cell-foreground border-border";
+      case CellState.REFERENCED:
+        return "bg-gc-referenced-cell text-gc-referenced-cell-foreground border-gc-referenced-cell";
+      case CellState.DEREFERENCED:
+        return "bg-gc-dereferenced-cell text-gc-dereferenced-cell-foreground border-gc-dereferenced-cell";
+      case CellState.MARKED:
+        return "bg-gc-marked-cell text-gc-marked-cell-foreground border-gc-marked-cell";
+      case CellState.SURVIVED:
+        return "bg-gc-survived-cell text-gc-survived-cell-foreground border-gc-survived-cell";
+      case CellState.COPYING:
+        return "bg-accent text-accent-foreground border-accent";
+      default:
+        return "bg-gc-free-cell text-gc-free-cell-foreground border-border";
+    }
   };
 
   const getCellBorder = (cell: MemoryCell, index: number) => {
