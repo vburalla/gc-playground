@@ -557,7 +557,7 @@ export const GenerationalGCSimulator = () => {
 
         {/* Main Content */}
         <div className="p-4 h-[calc(100dvh-var(--nav-h)-4rem)] flex items-center justify-center">
-          <Card className="w-full max-w-2xl lg:max-w-3xl">
+          <Card className="w-full max-w-5xl lg:max-w-6xl">
             <CardHeader className="pb-4 flex-shrink-0">
               <CardTitle className="text-center text-lg">
                 {phase === 'allocating' ? 'Allocating' : 
@@ -575,7 +575,7 @@ export const GenerationalGCSimulator = () => {
                   className="grid gap-1 w-full mx-auto"
                   style={{ 
                     gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
-                    maxWidth: gridSize <= 10 ? '32rem' : gridSize <= 15 ? '40rem' : '48rem',
+                    maxWidth: gridSize <= 10 ? '32rem' : gridSize <= 15 ? '56rem' : '72rem',
                     width: '100%'
                   }}
                 >
