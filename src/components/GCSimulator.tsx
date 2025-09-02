@@ -225,7 +225,7 @@ export const GCSimulator = () => {
         </header>
 
         {/* Main Content */}
-        <div className="p-4 h-[calc(100vh-4rem)] flex items-center justify-center">
+        <div className="p-4 h-[calc(100dvh-var(--nav-h)-4rem)] flex items-center justify-center">
           <Card className="w-full max-w-2xl lg:max-w-3xl">
             <CardHeader className="pb-4">
               <CardTitle className="text-center text-lg">

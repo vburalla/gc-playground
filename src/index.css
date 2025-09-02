@@ -39,6 +39,9 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    /* Layout */
+    --nav-h: 4rem;
+
     /* GC Simulator Colors */
     --gc-free-cell: 0 0% 95%;
     --gc-free-cell-foreground: 220 25% 8%;

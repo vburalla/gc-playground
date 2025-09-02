@@ -556,7 +556,7 @@ export const GenerationalGCSimulator = () => {
         </header>
 
         {/* Main Content */}
-        <div className="p-4 h-[calc(100vh-4rem)] flex items-center justify-center overflow-hidden">
+        <div className="p-4 h-[calc(100dvh-var(--nav-h)-4rem)] flex items-center justify-center overflow-hidden">
           <Card className="w-full max-w-6xl h-full flex flex-col">
             <CardHeader className="pb-4 flex-shrink-0">
               <CardTitle className="text-center text-lg">
@@ -572,11 +572,11 @@ export const GenerationalGCSimulator = () => {
             <CardContent className="flex-1 flex flex-col overflow-hidden p-4">
               <div className="flex-1 flex items-center justify-center overflow-hidden">
                 <div 
-                  className="grid gap-1 w-full h-full max-h-full"
+                  className="grid gap-1 w-full mx-auto"
                   style={{ 
                     gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
-                    maxWidth: '100%',
-                    maxHeight: '100%'
+                    maxWidth: gridSize <= 10 ? '32rem' : gridSize <= 15 ? '40rem' : '48rem',
+                    width: '100%'
                   }}
                 >
                   {heap.map((cell, index) => {
