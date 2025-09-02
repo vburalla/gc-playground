@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 
 export const Navigation = () => {
   return (
-    <header className="w-full h-[var(--nav-h)] bg-gradient-bg border-b border-border/50 shadow-lg backdrop-blur-sm">
-      <div className="container mx-auto px-6 h-full">
-        <div className="h-full flex items-center justify-between">
+    <header className="w-full bg-gradient-bg border-b border-border/50 shadow-lg backdrop-blur-sm">
+      <div className="container mx-auto px-6 py-4">
+        <div className="flex items-center justify-between">
           <div className="flex-1 text-center">
             <h1 className="text-2xl font-bold text-foreground bg-gradient-to-r from-primary to-ring bg-clip-text text-transparent">
               Garbage Collector Simulator

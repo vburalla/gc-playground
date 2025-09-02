@@ -430,7 +430,7 @@ export const GenerationalGCSimulator = () => {
     return () => clearInterval(interval);
   }, [isRunning, phase, heap, speed]);
 
-  const getCellClassName = (cell: MemoryCell) => {
+  const getCellColor = (cell: MemoryCell) => {
     switch (cell.state) {
       case CellState.FREE:
         return "bg-gc-free-cell text-gc-free-cell-foreground border-border";
@@ -443,7 +443,7 @@ export const GenerationalGCSimulator = () => {
       case CellState.SURVIVED:
         return "bg-gc-survived-cell text-gc-survived-cell-foreground border-gc-survived-cell";
       case CellState.COPYING:
-        return "bg-gradient-to-r from-gc-marked-cell to-gc-survived-cell text-gc-survived-cell-foreground border-gc-survived-cell animate-pulse";
+        return "bg-accent text-accent-foreground border-accent";
       default:
         return "bg-gc-free-cell text-gc-free-cell-foreground border-border";
     }
@@ -522,7 +522,7 @@ export const GenerationalGCSimulator = () => {
   const survivorCols = Math.max(1, gridSize - edenCols - tenuredCols);
 
   return (
-    <>
+    <div className="flex min-h-screen w-full">
       <AppSidebar 
         gridSize={gridSize}
         setGridSize={setGridSize}
@@ -545,70 +545,58 @@ export const GenerationalGCSimulator = () => {
         isVisible={['marking', 'copying-survivor', 'copying-tenured', 'major-gc-marking', 'major-gc-compacting'].includes(phase)}
       />
       
-      <main className="flex-1 bg-gradient-bg">
-        {/* Header with Sidebar Trigger */}
-        <header className="h-16 flex items-center border-b border-border bg-card/50 backdrop-blur-sm">
-          <SidebarTrigger className="ml-4" />
-          <div className="flex-1 text-center">
-            <h1 className="text-2xl font-bold text-foreground">GENERATIONAL COLLECTOR</h1>
-            <p className="text-sm text-muted-foreground">Demo</p>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <div className="p-4 h-[calc(100dvh-var(--nav-h)-4rem)] flex items-center justify-center">
-          <Card className="w-full h-full">
-            <CardHeader className="pb-4 flex-shrink-0">
-              <CardTitle className="text-center text-lg">
-                {phase === 'allocating' ? 'Allocating' : 
-                 phase === 'marking' ? 'Marking Live Objects' :
-                 phase === 'copying-survivor' ? 'Copying Eden → Survivor' :
-                 phase === 'copying-tenured' ? 'Copying Survivor → Survivor/Tenured' :
-                 phase === 'major-gc-marking' ? 'Major GC: Marking Tenured' :
-                 phase === 'major-gc-compacting' ? 'Major GC: Compacting Tenured' :
-                 'Generational Heap'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex justify-center p-4 h-full overflow-auto">
-              <div className="flex items-center justify-center pt-6">
-                <div 
-                  className="grid gap-1 w-full mx-auto"
-                  style={{ 
-                    gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
-                    width: '100%'
-                  }}
-                >
-                  {heap.map((cell, index) => {
-                    const label = getSpaceLabel(index);
-                    const borderClasses = getCellBorder(cell, index);
-                    return (
-                      <div key={cell.id} className="relative">
-                        {label && (
-                          <div className="absolute -top-6 left-0 text-xs font-bold text-foreground whitespace-nowrap z-10 bg-background px-2 py-1 rounded shadow-sm border border-current">
-                            {label}
-                          </div>
-                        )}
-                        <div
-                          className={`
-                            aspect-square border-2 rounded flex items-center justify-center font-bold
-                            transition-all duration-300 ${getCellClassName(cell)} ${borderClasses}
-                          `}
-                          style={{ 
-                            fontSize: gridSize > 18 ? '0.5rem' : gridSize > 15 ? '0.625rem' : '0.75rem'
-                          }}
-                          title={`Celda ${cell.id}: ${cell.state} (Ciclos: ${cell.survivedCycles}) - ${cell.space}`}
-                        >
-                          {cell.survivedCycles > 0 ? cell.survivedCycles : ''}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <main className="flex-1 p-6">
+          <SidebarTrigger />
+        <div className="flex-1 text-center">
+          <h1 className="text-2xl font-bold">Generational Garbage Collector</h1>
         </div>
+        
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-center">
+              Memoria del Heap - Generational GC
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div 
+              className="grid gap-0 mx-auto w-fit p-4 bg-muted/20 rounded-lg"
+              style={{ 
+                gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+                maxWidth: '90vw',
+                aspectRatio: '1'
+              }}
+            >
+              {heap.map((cell, index) => {
+                const label = getSpaceLabel(index);
+                const borderClasses = getCellBorder(cell, index);
+                return (
+                  <div key={cell.id} className="relative">
+                    {label && (
+                      <div className="absolute -top-7 left-0 text-xs font-bold text-foreground whitespace-nowrap z-10 bg-background px-2 py-1 rounded shadow-sm border-2 border-current">
+                        {label}
+                      </div>
+                    )}
+                    <div
+                      className={`
+                        aspect-square transition-all duration-300 flex items-center justify-center text-xs font-semibold
+                        ${getCellColor(cell)} ${borderClasses}
+                        hover:scale-110 cursor-pointer
+                      `}
+                      style={{
+                        minWidth: `${Math.max(20, 600/gridSize)}px`,
+                        minHeight: `${Math.max(20, 600/gridSize)}px`
+                      }}
+                      title={`Celda ${cell.id}: ${cell.state} (Ciclos: ${cell.survivedCycles}) - ${cell.space}`}
+                    >
+                      {cell.survivedCycles > 0 ? cell.survivedCycles : ''}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </main>
-    </>
+    </div>
   );
 };
