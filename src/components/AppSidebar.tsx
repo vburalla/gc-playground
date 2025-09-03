@@ -71,9 +71,9 @@ export function AppSidebar({
                 >
                   {collectorType === 'generational' ? (
                     <>
-                      <option value={4}>4 celdas Eden</option>
-                      <option value={6}>6 celdas Eden</option>
-                      <option value={8}>8 celdas Eden</option>
+                      <option value={4}>13x10 (Eden: 4 celdas)</option>
+                      <option value={6}>19x15 (Eden: 6 celdas)</option>
+                      <option value={8}>26x20 (Eden: 8 celdas)</option>
                     </>
                   ) : (
                     <>
