@@ -337,7 +337,7 @@ export const CopyGCSimulator = () => {
                         transition-all duration-500 ${getCellClassName(cell)}
                       `}
                       style={{ 
-                        fontSize: gridSize > 18 ? '0.5rem' : gridSize > 15 ? '0.625rem' : '0.75rem'
+                        fontSize: gridSize >= 20 ? '0.5rem' : gridSize >= 15 ? '0.625rem' : '0.75rem'
                       }}
                     >
                       {cell.state === CellState.SURVIVED && cell.survivedCycles > 0 
@@ -368,7 +368,7 @@ export const CopyGCSimulator = () => {
                         transition-all duration-500 ${getCellClassName(cell)}
                       `}
                       style={{ 
-                        fontSize: gridSize > 18 ? '0.5rem' : gridSize > 15 ? '0.625rem' : '0.75rem'
+                        fontSize: gridSize >= 20 ? '0.5rem' : gridSize >= 15 ? '0.625rem' : '0.75rem'
                       }}
                     >
                       {cell.state === CellState.SURVIVED && cell.survivedCycles > 0 

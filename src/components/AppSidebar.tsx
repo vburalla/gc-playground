@@ -69,11 +69,9 @@ export function AppSidebar({
                   className="w-full p-2 rounded border bg-background text-foreground text-sm"
                   title="Tamaño de Memoria"
                 >
-                  <option value={10}>10x10</option>
-                  <option value={12}>12x12</option>
-                  <option value={15}>15x15</option>
-                  <option value={18}>18x18</option>
-                  <option value={20}>20x20</option>
+                  <option value={10}>10x10 (100 celdas)</option>
+                  <option value={15}>15x15 (225 celdas)</option>
+                  <option value={20}>20x20 (400 celdas)</option>
                 </select>
               </div>
 

@@ -562,7 +562,8 @@ export const GenerationalGCSimulator = () => {
               className="grid gap-0 mx-auto w-fit p-4 bg-muted/20 rounded-lg"
               style={{ 
                 gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-                maxWidth: '90vw',
+                maxWidth: gridSize <= 10 ? '28rem' : gridSize <= 15 ? '36rem' : '48rem',
+                width: '100%',
                 aspectRatio: '1'
               }}
             >

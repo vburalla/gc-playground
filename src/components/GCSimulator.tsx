@@ -237,8 +237,9 @@ export const GCSimulator = () => {
                 className="grid gap-1 w-full mx-auto"
                 style={{ 
                   gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
-                  maxWidth: gridSize <= 10 ? '32rem' : gridSize <= 15 ? '40rem' : '48rem',
-                  width: '100%'
+                  maxWidth: gridSize <= 10 ? '28rem' : gridSize <= 15 ? '36rem' : '48rem',
+                  width: '100%',
+                  aspectRatio: '1'
                 }}
               >
                 {heap.map((cell) => (
@@ -249,7 +250,7 @@ export const GCSimulator = () => {
                       transition-all duration-300 ${getCellClassName(cell)}
                     `}
                     style={{ 
-                      fontSize: gridSize > 18 ? '0.5rem' : gridSize > 15 ? '0.625rem' : '0.75rem'
+                      fontSize: gridSize >= 20 ? '0.5rem' : gridSize >= 15 ? '0.625rem' : '0.75rem'
                     }}
                   >
                     {cell.state === CellState.SURVIVED && cell.survivedCycles > 0 
