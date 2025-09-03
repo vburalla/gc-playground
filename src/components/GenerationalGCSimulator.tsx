@@ -27,11 +27,28 @@ export const GenerationalGCSimulator = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [gcCycles, setGcCycles] = useState(0);
   const [phase, setPhase] = useState<'allocating' | 'marking' | 'copying-survivor' | 'copying-tenured' | 'swapping' | 'major-gc-marking' | 'major-gc-compacting' | 'complete'>('allocating');
-  const [gridSize, setGridSize] = useState(15);
+  const [edenSize, setEdenSize] = useState(6); // Eden size in cells (width)
   const [speed, setSpeed] = useState(600);
   const [activeSurvivorSpace, setActiveSurvivorSpace] = useState<'survivor-from' | 'survivor-to'>('survivor-from');
   
   const [tenureThreshold, setTenureThreshold] = useState(3); // cycles to move to tenured
+
+  // Calculate proportional sizes based on Eden
+  const calculateGridSizes = () => {
+    // Eden is the base, others are proportional
+    const survivorSize = Math.max(2, Math.floor(edenSize * 0.75)); // 75% of Eden
+    const tenuredSize = Math.max(4, Math.floor(edenSize * 1.5)); // 150% of Eden
+    const totalWidth = edenSize + survivorSize + tenuredSize;
+    const totalHeight = Math.max(8, Math.floor(totalWidth * 0.8)); // Maintain reasonable aspect ratio
+    
+    return {
+      edenCols: edenSize,
+      survivorCols: survivorSize,
+      tenuredCols: tenuredSize,
+      gridSize: totalWidth,
+      gridHeight: totalHeight
+    };
+  };
 
   // Initialize heap with four spaces
   useEffect(() => {
@@ -39,14 +56,11 @@ export const GenerationalGCSimulator = () => {
   }, []);
 
   const initializeHeap = () => {
-    const totalCells = gridSize * gridSize;
+    const { edenCols, survivorCols, tenuredCols, gridSize, gridHeight } = calculateGridSizes();
+    const totalCells = gridSize * gridHeight;
     const newHeap: MemoryCell[] = [];
     
-    // Calculate columns for each zone (vertical distribution)
-    const edenCols = Math.max(1, Math.floor(gridSize * 0.2)); // 20% Eden (fixed)
-    const tenuredCols = Math.max(1, Math.floor(gridSize * 0.5)); // 50% Tenured (fixed)
-    const survivorCols = Math.max(1, gridSize - edenCols - tenuredCols);
-    const survivorRows = Math.floor(gridSize / 2); // Half rows for each survivor space
+    const survivorRows = Math.floor(gridHeight / 2); // Half rows for each survivor space
     
     // Initialize all cells first
     for (let i = 0; i < totalCells; i++) {
@@ -59,7 +73,7 @@ export const GenerationalGCSimulator = () => {
     }
     
     // Assign spaces based on position
-    for (let row = 0; row < gridSize; row++) {
+    for (let row = 0; row < gridHeight; row++) {
       for (let col = 0; col < gridSize; col++) {
         const cellId = row * gridSize + col;
         
@@ -430,6 +444,13 @@ export const GenerationalGCSimulator = () => {
     return () => clearInterval(interval);
   }, [isRunning, phase, heap, speed]);
 
+  // Reinitialize heap when eden size changes
+  useEffect(() => {
+    if (!isRunning) {
+      initializeHeap();
+    }
+  }, [edenSize]);
+
   const getCellColor = (cell: MemoryCell) => {
     switch (cell.state) {
       case CellState.FREE:
@@ -450,13 +471,11 @@ export const GenerationalGCSimulator = () => {
   };
 
   const getCellBorder = (cell: MemoryCell, index: number) => {
+    const { edenCols, survivorCols, tenuredCols, gridSize, gridHeight } = calculateGridSizes();
     const row = Math.floor(index / gridSize);
     const col = index % gridSize;
     
-    const edenCols = Math.max(1, Math.floor(gridSize * 0.2));
-    const tenuredCols = Math.max(1, Math.floor(gridSize * 0.5));
-    const survivorCols = Math.max(1, gridSize - edenCols - tenuredCols);
-    const survivorRows = Math.floor(gridSize / 2);
+    const survivorRows = Math.floor(gridHeight / 2);
     
     let borderClasses = "border";
     
@@ -466,7 +485,7 @@ export const GenerationalGCSimulator = () => {
       if (col === 0) borderClasses += " border-l-4"; // Left border of Eden
       if (col === edenCols - 1) borderClasses += " border-r-4"; // Right border of Eden
       if (row === 0) borderClasses += " border-t-4"; // Top border of Eden
-      if (row === gridSize - 1) borderClasses += " border-b-4"; // Bottom border of Eden
+      if (row === gridHeight - 1) borderClasses += " border-b-4"; // Bottom border of Eden
     }
     // Survivor From borders
     else if (cell.space === 'survivor-from') {
@@ -482,28 +501,26 @@ export const GenerationalGCSimulator = () => {
       if (col === edenCols) borderClasses += " border-l-4"; // Left border of Survivor
       if (col === edenCols + survivorCols - 1) borderClasses += " border-r-4"; // Right border of Survivor
       if (row === survivorRows) borderClasses += " border-t-4"; // Divider between From/To
-      if (row === gridSize - 1) borderClasses += " border-b-4"; // Bottom border of Survivor area
+      if (row === gridHeight - 1) borderClasses += " border-b-4"; // Bottom border of Survivor area
     }
     // Tenured borders
     else if (cell.space === 'tenured') {
-      borderClasses += " border-secondary";
+      borderClasses += " border-destructive";
       if (col === edenCols + survivorCols) borderClasses += " border-l-4"; // Left border of Tenured
       if (col === gridSize - 1) borderClasses += " border-r-4"; // Right border of Tenured
       if (row === 0) borderClasses += " border-t-4"; // Top border of Tenured
-      if (row === gridSize - 1) borderClasses += " border-b-4"; // Bottom border of Tenured
+      if (row === gridHeight - 1) borderClasses += " border-b-4"; // Bottom border of Tenured
     }
     
     return borderClasses;
   };
 
   const getSpaceLabel = (index: number) => {
+    const { edenCols, survivorCols, tenuredCols, gridSize, gridHeight } = calculateGridSizes();
     const row = Math.floor(index / gridSize);
     const col = index % gridSize;
     
-    const edenCols = Math.max(1, Math.floor(gridSize * 0.2));
-    const tenuredCols = Math.max(1, Math.floor(gridSize * 0.5));
-    const survivorCols = Math.max(1, gridSize - edenCols - tenuredCols);
-    const survivorRows = Math.floor(gridSize / 2);
+    const survivorRows = Math.floor(gridHeight / 2);
     
     // Show labels at the top of each zone
     if (row === 0) {
@@ -517,15 +534,13 @@ export const GenerationalGCSimulator = () => {
     return "";
   };
 
-  const edenCols = Math.max(1, Math.floor(gridSize * 0.2));
-  const tenuredCols = Math.max(1, Math.floor(gridSize * 0.5));
-  const survivorCols = Math.max(1, gridSize - edenCols - tenuredCols);
+  const { gridSize, gridHeight } = calculateGridSizes();
 
   return (
     <div className="flex min-h-screen w-full">
       <AppSidebar 
-        gridSize={gridSize}
-        setGridSize={setGridSize}
+        gridSize={edenSize}
+        setGridSize={setEdenSize}
         speed={speed}
         setSpeed={setSpeed}
         isRunning={isRunning}
@@ -554,7 +569,7 @@ export const GenerationalGCSimulator = () => {
         <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-center">
-              Memoria del Heap - Generational GC
+              Memoria del Heap - Generational GC (Eden: {edenSize} celdas)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -564,7 +579,7 @@ export const GenerationalGCSimulator = () => {
                 gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
                 maxWidth: gridSize <= 10 ? '28rem' : gridSize <= 15 ? '36rem' : '48rem',
                 width: '100%',
-                aspectRatio: '1'
+                aspectRatio: `${gridSize}/${gridHeight}`
               }}
             >
               {heap.map((cell, index) => {
@@ -584,8 +599,8 @@ export const GenerationalGCSimulator = () => {
                         hover:scale-110 cursor-pointer
                       `}
                       style={{
-                        minWidth: `${Math.max(20, 600/gridSize)}px`,
-                        minHeight: `${Math.max(20, 600/gridSize)}px`
+                        minWidth: `${Math.max(16, 480/gridSize)}px`,
+                        minHeight: `${Math.max(16, 480/gridHeight)}px`
                       }}
                       title={`Celda ${cell.id}: ${cell.state} (Ciclos: ${cell.survivedCycles}) - ${cell.space}`}
                     >

@@ -60,18 +60,28 @@ export function AppSidebar({
             <div className="space-y-4 p-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">
-                  {!isCollapsed && "Tamaño de Memoria"}
+                  {!isCollapsed && (collectorType === 'generational' ? "Tamaño Eden Space" : "Tamaño de Memoria")}
                 </label>
                 <select 
                   value={gridSize} 
                   onChange={(e) => setGridSize(Number(e.target.value))}
                   disabled={isRunning}
                   className="w-full p-2 rounded border bg-background text-foreground text-sm"
-                  title="Tamaño de Memoria"
+                  title={collectorType === 'generational' ? "Tamaño Eden Space" : "Tamaño de Memoria"}
                 >
-                  <option value={10}>10x10 (100 celdas)</option>
-                  <option value={15}>15x15 (225 celdas)</option>
-                  <option value={20}>20x20 (400 celdas)</option>
+                  {collectorType === 'generational' ? (
+                    <>
+                      <option value={4}>4 celdas Eden</option>
+                      <option value={6}>6 celdas Eden</option>
+                      <option value={8}>8 celdas Eden</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value={10}>10x10 (100 celdas)</option>
+                      <option value={15}>15x15 (225 celdas)</option>
+                      <option value={20}>20x20 (400 celdas)</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -127,7 +137,7 @@ export function AppSidebar({
                   <p className="text-sm text-muted-foreground">Paso: {currentStep}</p>
                   <p className="text-sm text-muted-foreground">Ciclos GC: {gcCycles}</p>
                   <p className="text-sm text-muted-foreground">Fase: {phase}</p>
-                  <p className="text-sm text-muted-foreground">Celdas: {gridSize}x{gridSize}</p>
+                  <p className="text-sm text-muted-foreground">Celdas: {collectorType === 'generational' ? `Eden ${gridSize}` : `${gridSize}x${gridSize}`}</p>
                   {collectorType === 'copy' && activeSpace && (
                     <p className="text-sm text-muted-foreground">Activo: {activeSpace === 'from' ? 'From' : 'To'} Space</p>
                   )}
