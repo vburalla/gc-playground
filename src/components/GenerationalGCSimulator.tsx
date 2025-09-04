@@ -35,9 +35,9 @@ export const GenerationalGCSimulator = () => {
 
   // Calculate proportional sizes based on Eden
   const calculateGridSizes = () => {
-    // Eden is the base, others are proportional
-    const survivorSize = Math.max(2, Math.floor(edenSize * 2.0)); // 200% of Eden (Eden es la mitad del Survivor)
-    const tenuredSize = Math.max(4, Math.floor(edenSize * 1.3)); // 130% of Eden
+    // Eden ~20%, Survivor ~30%, Tenured ~50% of total space
+    const survivorSize = Math.max(2, Math.floor(edenSize * 1.5)); // 150% of Eden (30%/20% = 1.5)
+    const tenuredSize = Math.max(4, Math.floor(edenSize * 2.5)); // 250% of Eden (50%/20% = 2.5)
     const totalWidth = edenSize + survivorSize + tenuredSize;
     const totalHeight = Math.max(8, Math.floor(totalWidth * 0.8)); // Maintain reasonable aspect ratio
     
