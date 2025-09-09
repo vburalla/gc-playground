@@ -47,7 +47,8 @@ export const G1GCSimulator = () => {
   const [speed, setSpeed] = useState(800);
   const [regionSize] = useState(4); // 4x4 cells per region (16 cells)
   const [currentEdenRegions, setCurrentEdenRegions] = useState(0);
-  const maxEdenRegions = 4;
+  const maxEdenRegions = 4; // Eden regions
+  const maxSurvivorRegions = 2; // Survivor regions (half of Eden)
 
   // Initialize G1 heap with regions
   useEffect(() => {
@@ -79,19 +80,20 @@ export const G1GCSimulator = () => {
       });
     }
     
-    // Assign initial regions
-    if (newRegions.length >= 6) {
+    // Assign initial regions: 2 Eden, 1 Survivor From, 1 Survivor To, 1 Tenured
+    if (newRegions.length >= 5) {
       newRegions[0].type = RegionType.EDEN; // First Eden region
-      newRegions[1].type = RegionType.SURVIVOR_FROM;
-      newRegions[2].type = RegionType.SURVIVOR_TO;
-      newRegions[3].type = RegionType.TENURED;
+      newRegions[1].type = RegionType.EDEN; // Second Eden region  
+      newRegions[2].type = RegionType.SURVIVOR_FROM;
+      newRegions[3].type = RegionType.SURVIVOR_TO;
+      newRegions[4].type = RegionType.TENURED;
     }
     
     setRegions(newRegions);
     setCurrentStep(0);
     setGcCycles(0);
     setPhase('allocating');
-    setCurrentEdenRegions(1);
+    setCurrentEdenRegions(2);
   };
 
   const getAvailableEdenRegion = () => {
@@ -198,18 +200,27 @@ export const G1GCSimulator = () => {
     setRegions(prev => {
       const newRegions = [...prev];
       
+      // First, create some dereferenced objects (garbage) 
       newRegions.forEach(region => {
-        const updatedCells = region.cells.map(cell => {
-          // Mark live objects
+        if (region.type === RegionType.EDEN || region.type === RegionType.SURVIVOR_FROM || region.type === RegionType.SURVIVOR_TO) {
+          region.cells.forEach(cell => {
+            if (cell.state === CellState.REFERENCED && Math.random() < 0.3) {
+              cell.state = CellState.DEREFERENCED;
+            }
+          });
+        }
+      });
+      
+      // Then mark all live objects
+      newRegions.forEach(region => {
+        region.cells.forEach(cell => {
           if (cell.state === CellState.REFERENCED || 
               (cell.state === CellState.SURVIVED && cell.survivedCycles > 0)) {
-            return { ...cell, state: CellState.MARKED };
+            cell.state = CellState.MARKED;
           }
-          return cell;
         });
         
-        region.cells = updatedCells;
-        region.occupancy = calculateOccupancy(updatedCells);
+        region.occupancy = calculateOccupancy(region.cells);
       });
       
       return newRegions;
@@ -222,38 +233,76 @@ export const G1GCSimulator = () => {
       const edenRegions = newRegions.filter(r => r.type === RegionType.EDEN);
       const survivorFromRegion = newRegions.find(r => r.type === RegionType.SURVIVOR_FROM);
       const survivorToRegion = newRegions.find(r => r.type === RegionType.SURVIVOR_TO);
-      const tenuredRegion = newRegions.find(r => r.type === RegionType.TENURED);
+      const tenuredRegions = newRegions.filter(r => r.type === RegionType.TENURED);
       
-      if (!survivorFromRegion || !survivorToRegion || !tenuredRegion) return newRegions;
+      if (!survivorFromRegion || !survivorToRegion) return newRegions;
       
       // Collect all marked objects from Eden regions
-      let markedObjects: MemoryCell[] = [];
+      let markedFromEden: MemoryCell[] = [];
       edenRegions.forEach(region => {
-        markedObjects = markedObjects.concat(
+        markedFromEden = markedFromEden.concat(
           region.cells.filter(c => c.state === CellState.MARKED)
         );
       });
       
-      // Evacuate to survivor space
-      let survivorIndex = 0;
-      const survivorFreeCells = survivorToRegion.cells.filter(c => c.state === CellState.FREE);
+      // Collect marked objects from Survivor From (older objects)
+      const markedFromSurvivor = survivorFromRegion.cells.filter(c => c.state === CellState.MARKED);
       
-      markedObjects.forEach(obj => {
-        if (survivorIndex < survivorFreeCells.length) {
-          const targetCell = survivorFreeCells[survivorIndex];
+      // Find available spaces for evacuation
+      const survivorToFreeCells = survivorToRegion.cells.filter(c => c.state === CellState.FREE);
+      const tenuredFreeCells = tenuredRegions.length > 0 ? 
+        tenuredRegions[0].cells.filter(c => c.state === CellState.FREE) : [];
+      
+      let survivorToIndex = 0;
+      let tenuredIndex = 0;
+      
+      // Evacuate Eden objects to Survivor To
+      markedFromEden.forEach(obj => {
+        if (survivorToIndex < survivorToFreeCells.length) {
+          const targetCell = survivorToFreeCells[survivorToIndex];
           const targetIndex = survivorToRegion.cells.findIndex(c => c.id === targetCell.id);
           if (targetIndex !== -1) {
             survivorToRegion.cells[targetIndex] = {
               ...targetCell,
               state: CellState.COPYING,
-              survivedCycles: (obj.survivedCycles || 0) + 1
+              survivedCycles: 1
             };
-            survivorIndex++;
+            survivorToIndex++;
           }
         }
       });
       
-      // Clear Eden regions and make them unassigned
+      // Evacuate older Survivor objects (promote some to Tenured)
+      markedFromSurvivor.forEach(obj => {
+        if (obj.survivedCycles >= 2 && tenuredIndex < tenuredFreeCells.length && tenuredRegions.length > 0) {
+          // Promote to Tenured
+          const targetCell = tenuredFreeCells[tenuredIndex];
+          const tenuredRegion = tenuredRegions[0];
+          const targetIndex = tenuredRegion.cells.findIndex(c => c.id === targetCell.id);
+          if (targetIndex !== -1) {
+            tenuredRegion.cells[targetIndex] = {
+              ...targetCell,
+              state: CellState.COPYING,
+              survivedCycles: 0 // Reset in tenured
+            };
+            tenuredIndex++;
+          }
+        } else if (survivorToIndex < survivorToFreeCells.length) {
+          // Keep in Survivor space
+          const targetCell = survivorToFreeCells[survivorToIndex];
+          const targetIndex = survivorToRegion.cells.findIndex(c => c.id === targetCell.id);
+          if (targetIndex !== -1) {
+            survivorToRegion.cells[targetIndex] = {
+              ...targetCell,
+              state: CellState.COPYING,
+              survivedCycles: obj.survivedCycles + 1
+            };
+            survivorToIndex++;
+          }
+        }
+      });
+      
+      // Clear evacuated regions (Eden and Survivor From)
       edenRegions.forEach(region => {
         const regionIndex = newRegions.findIndex(r => r.id === region.id);
         newRegions[regionIndex] = {
@@ -268,12 +317,32 @@ export const G1GCSimulator = () => {
         };
       });
       
-      // Update occupancy for survivor
-      const survivorIndex2 = newRegions.findIndex(r => r.id === survivorToRegion.id);
-      newRegions[survivorIndex2] = {
+      // Clear Survivor From (it becomes the new empty survivor space)
+      const survivorFromIndex = newRegions.findIndex(r => r.id === survivorFromRegion.id);
+      newRegions[survivorFromIndex] = {
+        ...survivorFromRegion,
+        cells: survivorFromRegion.cells.map(c => ({
+          ...c,
+          state: CellState.FREE,
+          survivedCycles: 0
+        })),
+        occupancy: 0
+      };
+      
+      // Update occupancies
+      const survivorToIndex2 = newRegions.findIndex(r => r.id === survivorToRegion.id);
+      newRegions[survivorToIndex2] = {
         ...survivorToRegion,
         occupancy: calculateOccupancy(survivorToRegion.cells)
       };
+      
+      if (tenuredRegions.length > 0) {
+        const tenuredIndex2 = newRegions.findIndex(r => r.id === tenuredRegions[0].id);
+        newRegions[tenuredIndex2] = {
+          ...tenuredRegions[0],
+          occupancy: calculateOccupancy(tenuredRegions[0].cells)
+        };
+      }
       
       setCurrentEdenRegions(0);
       return newRegions;
@@ -284,17 +353,29 @@ export const G1GCSimulator = () => {
     setRegions(prev => {
       const newRegions = [...prev];
       
+      // Finalize all copying operations
       newRegions.forEach(region => {
-        const updatedCells = region.cells.map(cell => {
+        region.cells.forEach(cell => {
           if (cell.state === CellState.COPYING) {
-            return { ...cell, state: CellState.SURVIVED };
+            cell.state = CellState.SURVIVED;
           }
-          return cell;
         });
         
-        region.cells = updatedCells;
-        region.occupancy = calculateOccupancy(updatedCells);
+        region.occupancy = calculateOccupancy(region.cells);
       });
+      
+      // Swap Survivor spaces (From becomes To, To becomes From)
+      const survivorFromRegion = newRegions.find(r => r.type === RegionType.SURVIVOR_FROM);
+      const survivorToRegion = newRegions.find(r => r.type === RegionType.SURVIVOR_TO);
+      
+      if (survivorFromRegion && survivorToRegion) {
+        const survivorFromIndex = newRegions.findIndex(r => r.id === survivorFromRegion.id);
+        const survivorToIndex = newRegions.findIndex(r => r.id === survivorToRegion.id);
+        
+        // Swap the types
+        newRegions[survivorFromIndex].type = RegionType.SURVIVOR_TO;
+        newRegions[survivorToIndex].type = RegionType.SURVIVOR_FROM;
+      }
       
       return newRegions;
     });
@@ -314,22 +395,22 @@ export const G1GCSimulator = () => {
       } else {
         // All Eden regions are full, start GC
         setGcCycles(prev => prev + 1);
-        toast.info(`Iniciando G1 GC Cycle #${gcCycles + 1}: Marcado`);
+        toast.info(`G1 GC iniciado - Regiones Eden llenas. Cycle #${gcCycles + 1}`);
         setPhase('marking');
       }
     } else if (phase === 'marking') {
       simulateMarking();
       setTimeout(() => {
         setPhase('evacuating');
-        toast.info("G1 GC: Evacuando objetos vivos");
-      }, 1000);
+        toast.info("G1 GC: Marcado completado - Evacuando objetos vivos");
+      }, 1200);
     } else if (phase === 'evacuating') {
       simulateEvacuation();
       setTimeout(() => {
         finalizeCopyPhase();
         setPhase('allocating');
-        toast.success(`G1 GC Cycle #${gcCycles} completado`);
-      }, 800);
+        toast.success(`G1 GC Cycle #${gcCycles} completado - Regiones libres para asignación`);
+      }, 1000);
     }
   };
 
@@ -435,7 +516,7 @@ export const G1GCSimulator = () => {
         <div className="flex-1 text-center">
           <h1 className="text-2xl font-bold">G1 Garbage Collector</h1>
           <p className="text-sm text-muted-foreground mt-2">
-            Eden Regions: {currentEdenRegions}/{maxEdenRegions} • Grid: {gridSize}x{gridSize} regions
+            Eden Regions: {currentEdenRegions}/{maxEdenRegions} • Survivor: {maxSurvivorRegions} • Grid: {gridSize}x{gridSize} regiones
           </p>
         </div>
         
