@@ -82,20 +82,10 @@ export const G1GCSimulator = () => {
       });
     }
     
-    // Assign initial regions randomly: 1 Eden, 3 Survivors, 1 Tenured
-    if (newRegions.length >= 5) {
-      const indices = Array.from({ length: newRegions.length }, (_, i) => i);
-      const pick = (arr: number[]) => arr.splice(Math.floor(Math.random() * arr.length), 1)[0];
-      const edenIdx = pick(indices);
-      const sIdx1 = pick(indices);
-      const sIdx2 = pick(indices);
-      const sIdx3 = pick(indices);
-      const tenuredIdx = pick(indices);
-      newRegions[edenIdx].type = RegionType.EDEN;
-      newRegions[sIdx1].type = RegionType.SURVIVOR;
-      newRegions[sIdx2].type = RegionType.SURVIVOR;
-      newRegions[sIdx3].type = RegionType.SURVIVOR;
-      newRegions[tenuredIdx].type = RegionType.TENURED;
+    // Assign initial regions: only 1 Eden, rest unassigned
+    if (newRegions.length >= 1) {
+      const randomIndex = Math.floor(Math.random() * newRegions.length);
+      newRegions[randomIndex].type = RegionType.EDEN;
     }
     
     setRegions(newRegions);
@@ -279,15 +269,29 @@ export const G1GCSimulator = () => {
     setRegions(prev => {
       const newRegions = [...prev];
       const edenRegions = newRegions.filter((r) => r.type === RegionType.EDEN);
-      const survivorRegions = newRegions.filter((r) => r.type === RegionType.SURVIVOR);
-      const tenuredRegions = newRegions.filter((r) => r.type === RegionType.TENURED);
+      let survivorRegions = newRegions.filter((r) => r.type === RegionType.SURVIVOR);
+
+      // Create Survivor regions dynamically if needed (up to 3)
+      const markedFromEden = edenRegions.flatMap(r => r.cells.filter(c => c.state === CellState.MARKED));
+      const survivorsNeeded = Math.min(3, Math.ceil(markedFromEden.length / 16));
+      
+      while (survivorRegions.length < survivorsNeeded) {
+        const unassigned = newRegions.filter(r => r.type === RegionType.UNASSIGNED);
+        if (unassigned.length === 0) break;
+        
+        const chosen = unassigned[Math.floor(Math.random() * unassigned.length)];
+        chosen.type = RegionType.SURVIVOR;
+        chosen.occupancy = 0;
+        chosen.cells = chosen.cells.map(c => ({ ...c, state: CellState.FREE, survivedCycles: 0 }));
+        survivorRegions.push(chosen);
+      }
 
       if (survivorRegions.length === 0) return newRegions;
 
       // Collect all marked objects from Eden regions
-      let markedFromEden: MemoryCell[] = [];
+      let markedFromEdenList: MemoryCell[] = [];
       edenRegions.forEach((region) => {
-        markedFromEden = markedFromEden.concat(region.cells.filter((c) => c.state === CellState.MARKED));
+        markedFromEdenList = markedFromEdenList.concat(region.cells.filter((c) => c.state === CellState.MARKED));
       });
 
       // Destination free cells across all survivors
@@ -298,7 +302,7 @@ export const G1GCSimulator = () => {
       let destIndex = 0;
 
       // Evacuate Eden objects into Survivors (fill-first)
-      markedFromEden.forEach((obj) => {
+      markedFromEdenList.forEach((obj) => {
         if (destIndex < survivorFreeCells.length) {
           const { regionId, cell: targetCell } = survivorFreeCells[destIndex];
           const sRegion = newRegions.find((r) => r.id === regionId)!;
@@ -314,13 +318,12 @@ export const G1GCSimulator = () => {
         }
       });
 
-      // Clear Eden regions to reuse
+      // Clear Eden regions and mark as UNASSIGNED (gray)
       edenRegions.forEach((region) => {
         const regionIndex = newRegions.findIndex((r) => r.id === region.id);
         newRegions[regionIndex] = {
           ...region,
-          // keep as Eden, just clear cells to reuse
-          type: RegionType.EDEN,
+          type: RegionType.UNASSIGNED, // Back to gray/unassigned
           cells: region.cells.map((c) => ({
             ...c,
             state: CellState.FREE,
@@ -338,13 +341,6 @@ export const G1GCSimulator = () => {
           occupancy: calculateOccupancy(newRegions[idx].cells),
         };
       });
-      if (tenuredRegions.length > 0) {
-        const tenuredIdx = newRegions.findIndex((r) => r.id === tenuredRegions[0].id);
-        newRegions[tenuredIdx] = {
-          ...tenuredRegions[0],
-          occupancy: calculateOccupancy(tenuredRegions[0].cells),
-        };
-      }
 
       const edenCount = newRegions.filter((r) => r.type === RegionType.EDEN).length;
       setCurrentEdenRegions(edenCount);
@@ -418,17 +414,38 @@ export const G1GCSimulator = () => {
       setRegions((prev) => {
         const newRegions = [...prev];
         const survivorRegions = newRegions.filter((r) => r.type === RegionType.SURVIVOR);
-        const tenuredRegions = newRegions.filter((r) => r.type === RegionType.TENURED);
+        let tenuredRegions = newRegions.filter((r) => r.type === RegionType.TENURED);
 
-        if (tenuredRegions.length === 0 || survivorRegions.length === 0) return newRegions;
+        if (survivorRegions.length === 0) return newRegions;
+
+        // Create Tenured regions dynamically if needed
+        const survivorLiveCells = survivorRegions.flatMap(r => 
+          r.cells.filter(c => c.state === CellState.MARKED || c.state === CellState.SURVIVED || c.state === CellState.REFERENCED)
+        );
+        const tenuredNeeded = Math.min(2, Math.ceil(survivorLiveCells.length / 16));
+        
+        while (tenuredRegions.length < tenuredNeeded) {
+          const unassigned = newRegions.filter(r => r.type === RegionType.UNASSIGNED);
+          if (unassigned.length === 0) break;
+          
+          const chosen = unassigned[Math.floor(Math.random() * unassigned.length)];
+          chosen.type = RegionType.TENURED;
+          chosen.occupancy = 0;
+          chosen.cells = chosen.cells.map(c => ({ ...c, state: CellState.FREE, survivedCycles: 0 }));
+          tenuredRegions.push(chosen);
+        }
+
+        if (tenuredRegions.length === 0) return newRegions;
 
         // Sort survivors by occupancy desc to start with the fullest
         const sortedSurvivors = [...survivorRegions].sort((a, b) => b.occupancy - a.occupancy);
 
         // Build tenured free cells list
-        let tenuredFreeCells = tenuredRegions[0].cells
-          .filter((c) => c.state === CellState.FREE)
-          .map((c) => ({ regionId: tenuredRegions[0].id, cell: c }));
+        let tenuredFreeCells = tenuredRegions.flatMap(tr =>
+          tr.cells
+            .filter((c) => c.state === CellState.FREE)
+            .map((c) => ({ regionId: tr.id, cell: c }))
+        );
         let tIndex = 0;
 
         // Evacuate live objects (MARKED or SURVIVED) to tenured
@@ -466,12 +483,14 @@ export const G1GCSimulator = () => {
           sRegionRef.occupancy = calculateOccupancy(sRegionRef.cells);
         }
 
-        // Update tenured occupancy
-        const tenuredIdx = newRegions.findIndex((r) => r.id === tenuredRegions[0].id);
-        newRegions[tenuredIdx] = {
-          ...newRegions[tenuredIdx],
-          occupancy: calculateOccupancy(newRegions[tenuredIdx].cells),
-        };
+        // Update tenured occupancies
+        tenuredRegions.forEach(tr => {
+          const tenuredIdx = newRegions.findIndex((r) => r.id === tr.id);
+          newRegions[tenuredIdx] = {
+            ...newRegions[tenuredIdx],
+            occupancy: calculateOccupancy(newRegions[tenuredIdx].cells),
+          };
+        });
 
         return newRegions;
       });
