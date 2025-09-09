@@ -380,8 +380,10 @@ export const G1GCSimulator = () => {
       const edenRegions = regions.filter((r) => r.type === RegionType.EDEN);
       const survivors = regions.filter((r) => r.type === RegionType.SURVIVOR);
 
-      const edenNearlyFullCount = edenRegions.filter((r) => r.occupancy >= 85).length;
-      const allSixEdenFullish = edenNearlyFullCount >= maxEdenRegions;
+      // Eden STW trigger: 6 Eden regions and none has FREE cells
+      const allSixEdenFull =
+        edenRegions.length >= maxEdenRegions &&
+        edenRegions.every((r) => r.cells.every((c) => c.state !== CellState.FREE));
 
       const survivorsCount = survivors.length;
       const survivorsFullishCount = survivors.filter((r) => r.occupancy >= 85).length;
@@ -391,9 +393,9 @@ export const G1GCSimulator = () => {
         setGcCycles((prev) => prev + 1);
         toast.info(`G1 GC: Survivor lleno • Promoviendo a Tenured • Cycle #${gcCycles + 1}`);
         setPhase('mixed-gc');
-      } else if (allSixEdenFullish) {
+      } else if (allSixEdenFull) {
         setGcCycles((prev) => prev + 1);
-        toast.info(`G1 GC iniciado - Eden casi lleno • Cycle #${gcCycles + 1}`);
+        toast.info(`G1 GC: Eden lleno (6) • Stop the world • Cycle #${gcCycles + 1}`);
         setPhase('marking');
       } else {
         simulateAllocation();
