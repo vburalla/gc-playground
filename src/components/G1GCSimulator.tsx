@@ -8,6 +8,7 @@ import { StopTheWorldIndicator } from "./StopTheWorldIndicator";
 export enum RegionType {
   UNASSIGNED = "unassigned",
   EDEN = "eden",
+  SURVIVOR = "survivor",
   SURVIVOR_FROM = "survivor-from", 
   SURVIVOR_TO = "survivor-to",
   TENURED = "tenured",
@@ -48,7 +49,7 @@ export const G1GCSimulator = () => {
   const [regionSize] = useState(4); // 4x4 cells per region (16 cells)
   const [currentEdenRegions, setCurrentEdenRegions] = useState(0);
   const maxEdenRegions = 6; // Eden regions (objetivo)
-  const maxSurvivorRegions = 2; // Survivor regions (half of Eden)
+  const maxSurvivorRegions = 3; // Survivor regions (half of Eden)
   const [promoteSurvivors, setPromoteSurvivors] = useState(false);
 
   // Initialize G1 heap with regions
@@ -81,17 +82,19 @@ export const G1GCSimulator = () => {
       });
     }
     
-    // Assign initial regions randomly: 1 Eden, 1 Survivor From, 1 Survivor To, 1 Tenured
-    if (newRegions.length >= 4) {
+    // Assign initial regions randomly: 1 Eden, 3 Survivors, 1 Tenured
+    if (newRegions.length >= 5) {
       const indices = Array.from({ length: newRegions.length }, (_, i) => i);
       const pick = (arr: number[]) => arr.splice(Math.floor(Math.random() * arr.length), 1)[0];
       const edenIdx = pick(indices);
-      const sFromIdx = pick(indices);
-      const sToIdx = pick(indices);
+      const sIdx1 = pick(indices);
+      const sIdx2 = pick(indices);
+      const sIdx3 = pick(indices);
       const tenuredIdx = pick(indices);
       newRegions[edenIdx].type = RegionType.EDEN;
-      newRegions[sFromIdx].type = RegionType.SURVIVOR_FROM;
-      newRegions[sToIdx].type = RegionType.SURVIVOR_TO;
+      newRegions[sIdx1].type = RegionType.SURVIVOR;
+      newRegions[sIdx2].type = RegionType.SURVIVOR;
+      newRegions[sIdx3].type = RegionType.SURVIVOR;
       newRegions[tenuredIdx].type = RegionType.TENURED;
     }
     
@@ -188,9 +191,9 @@ export const G1GCSimulator = () => {
           }
         }
 
-        // Increase mortality in Eden: 40-70% of referenced become dereferenced
+        // Increase mortality in Eden: 55-85% of referenced become dereferenced
         const referencedCells = updatedCells.filter((c) => c.state === CellState.REFERENCED);
-        const dereferenceTarget = Math.floor(referencedCells.length * (0.4 + Math.random() * 0.3));
+        const dereferenceTarget = Math.floor(referencedCells.length * (0.55 + Math.random() * 0.3));
         for (let i = 0; i < dereferenceTarget && referencedCells.length > 0; i++) {
           const randomIndex = Math.floor(Math.random() * referencedCells.length);
           const cellToDeref = referencedCells.splice(randomIndex, 1)[0];
@@ -203,11 +206,27 @@ export const G1GCSimulator = () => {
           }
         }
 
+        const newOcc = calculateOccupancy(updatedCells);
         newRegions[regionIndex] = {
           ...edenRegion!,
           cells: updatedCells,
-          occupancy: calculateOccupancy(updatedCells),
+          occupancy: newOcc,
         };
+
+        // If this Eden just became full, immediately create a new Eden (random unassigned) up to maxEdenRegions
+        if (newOcc >= 100) {
+          const currentEdenCount = newRegions.filter((r) => r.type === RegionType.EDEN).length;
+          if (currentEdenCount < maxEdenRegions) {
+            const unassignedNow = newRegions.filter((r) => r.type === RegionType.UNASSIGNED);
+            if (unassignedNow.length > 0) {
+              const chosen = unassignedNow[Math.floor(Math.random() * unassignedNow.length)];
+              chosen.type = RegionType.EDEN;
+              chosen.occupancy = 0;
+              chosen.cells = chosen.cells.map((c) => ({ ...c, state: CellState.FREE, survivedCycles: 0 }));
+              createdEden = true;
+            }
+          }
+        }
       }
 
       return newRegions;
@@ -220,12 +239,17 @@ export const G1GCSimulator = () => {
     setRegions(prev => {
       const newRegions = [...prev];
       
-      // First, create some dereferenced objects (garbage) 
-      newRegions.forEach(region => {
-        if (region.type === RegionType.EDEN || region.type === RegionType.SURVIVOR_FROM || region.type === RegionType.SURVIVOR_TO) {
-          region.cells.forEach(cell => {
+      // First, create some dereferenced objects (garbage)
+      newRegions.forEach((region) => {
+        if (
+          region.type === RegionType.EDEN ||
+          region.type === RegionType.SURVIVOR ||
+          region.type === RegionType.SURVIVOR_FROM ||
+          region.type === RegionType.SURVIVOR_TO
+        ) {
+          region.cells.forEach((cell) => {
             if (cell.state === CellState.REFERENCED) {
-              const p = region.type === RegionType.EDEN ? 0.6 : 0.45; // more garbage to free space
+              const p = region.type === RegionType.EDEN ? 0.7 : 0.55; // more garbage to free space
               if (Math.random() < p) {
                 cell.state = CellState.DEREFERENCED;
               }
@@ -253,175 +277,122 @@ export const G1GCSimulator = () => {
   const simulateEvacuation = () => {
     setRegions(prev => {
       const newRegions = [...prev];
-      const edenRegions = newRegions.filter(r => r.type === RegionType.EDEN);
-      const survivorFromRegion = newRegions.find(r => r.type === RegionType.SURVIVOR_FROM);
-      const survivorToRegion = newRegions.find(r => r.type === RegionType.SURVIVOR_TO);
-      const tenuredRegions = newRegions.filter(r => r.type === RegionType.TENURED);
-      
-      if (!survivorFromRegion || !survivorToRegion) return newRegions;
-      
+      const edenRegions = newRegions.filter((r) => r.type === RegionType.EDEN);
+      const survivorRegions = newRegions.filter((r) => r.type === RegionType.SURVIVOR);
+      const tenuredRegions = newRegions.filter((r) => r.type === RegionType.TENURED);
+
+      if (survivorRegions.length === 0) return newRegions;
+
       // Collect all marked objects from Eden regions
       let markedFromEden: MemoryCell[] = [];
-      edenRegions.forEach(region => {
-        markedFromEden = markedFromEden.concat(
-          region.cells.filter(c => c.state === CellState.MARKED)
-        );
+      edenRegions.forEach((region) => {
+        markedFromEden = markedFromEden.concat(region.cells.filter((c) => c.state === CellState.MARKED));
       });
-      
-      // Collect marked objects from Survivor From (older objects)
-      const markedFromSurvivor = survivorFromRegion.cells.filter(c => c.state === CellState.MARKED);
-      
-      // Find available spaces for evacuation
-      const survivorToFreeCells = survivorToRegion.cells.filter(c => c.state === CellState.FREE);
-      const tenuredFreeCells = tenuredRegions.length > 0 ? 
-        tenuredRegions[0].cells.filter(c => c.state === CellState.FREE) : [];
-      
-      let survivorToIndex = 0;
-      let tenuredIndex = 0;
-      
-      // Evacuate Eden objects to Survivor To
-      markedFromEden.forEach(obj => {
-        if (survivorToIndex < survivorToFreeCells.length) {
-          const targetCell = survivorToFreeCells[survivorToIndex];
-          const targetIndex = survivorToRegion.cells.findIndex(c => c.id === targetCell.id);
+
+      // Destination free cells across all survivors
+      const survivorFreeCells = survivorRegions.flatMap((sr) =>
+        sr.cells.filter((c) => c.state === CellState.FREE).map((c) => ({ regionId: sr.id, cell: c }))
+      );
+
+      let destIndex = 0;
+
+      // Evacuate Eden objects into Survivors (fill-first)
+      markedFromEden.forEach((obj) => {
+        if (destIndex < survivorFreeCells.length) {
+          const { regionId, cell: targetCell } = survivorFreeCells[destIndex];
+          const sRegion = newRegions.find((r) => r.id === regionId)!;
+          const targetIndex = sRegion.cells.findIndex((c) => c.id === targetCell.id);
           if (targetIndex !== -1) {
-            survivorToRegion.cells[targetIndex] = {
+            sRegion.cells[targetIndex] = {
               ...targetCell,
               state: CellState.COPYING,
-              survivedCycles: 1
+              survivedCycles: 1,
             };
-            survivorToIndex++;
+            destIndex++;
           }
         }
       });
-      
-      // Evacuate older Survivor objects (promote some to Tenured)
-      markedFromSurvivor.forEach(obj => {
-        if ((promoteSurvivors || obj.survivedCycles >= 2) && tenuredIndex < tenuredFreeCells.length && tenuredRegions.length > 0) {
-          // Promote to Tenured
-          const targetCell = tenuredFreeCells[tenuredIndex];
-          const tenuredRegion = tenuredRegions[0];
-          const targetIndex = tenuredRegion.cells.findIndex(c => c.id === targetCell.id);
-          if (targetIndex !== -1) {
-            tenuredRegion.cells[targetIndex] = {
-              ...targetCell,
-              state: CellState.COPYING,
-              survivedCycles: 0 // Reset in tenured
-            };
-            tenuredIndex++;
-          }
-        } else if (survivorToIndex < survivorToFreeCells.length) {
-          // Keep in Survivor space
-          const targetCell = survivorToFreeCells[survivorToIndex];
-          const targetIndex = survivorToRegion.cells.findIndex(c => c.id === targetCell.id);
-          if (targetIndex !== -1) {
-            survivorToRegion.cells[targetIndex] = {
-              ...targetCell,
-              state: CellState.COPYING,
-              survivedCycles: obj.survivedCycles + 1
-            };
-            survivorToIndex++;
-          }
-        }
-      });
-      
-      // Clear evacuated regions (Eden and Survivor From)
-      edenRegions.forEach(region => {
-        const regionIndex = newRegions.findIndex(r => r.id === region.id);
+
+      // Clear Eden regions to reuse
+      edenRegions.forEach((region) => {
+        const regionIndex = newRegions.findIndex((r) => r.id === region.id);
         newRegions[regionIndex] = {
           ...region,
           // keep as Eden, just clear cells to reuse
           type: RegionType.EDEN,
-          cells: region.cells.map(c => ({
+          cells: region.cells.map((c) => ({
             ...c,
             state: CellState.FREE,
-            survivedCycles: 0
+            survivedCycles: 0,
           })),
-          occupancy: 0
+          occupancy: 0,
         };
       });
-      
-      // Clear Survivor From (it becomes the new empty survivor space)
-      const survivorFromIndex = newRegions.findIndex(r => r.id === survivorFromRegion.id);
-      newRegions[survivorFromIndex] = {
-        ...survivorFromRegion,
-        cells: survivorFromRegion.cells.map(c => ({
-          ...c,
-          state: CellState.FREE,
-          survivedCycles: 0
-        })),
-        occupancy: 0
-      };
-      
+
       // Update occupancies
-      const survivorToIndex2 = newRegions.findIndex(r => r.id === survivorToRegion.id);
-      newRegions[survivorToIndex2] = {
-        ...survivorToRegion,
-        occupancy: calculateOccupancy(survivorToRegion.cells)
-      };
-      
+      survivorRegions.forEach((sr) => {
+        const idx = newRegions.findIndex((r) => r.id === sr.id);
+        newRegions[idx] = {
+          ...newRegions[idx],
+          occupancy: calculateOccupancy(newRegions[idx].cells),
+        };
+      });
       if (tenuredRegions.length > 0) {
-        const tenuredIndex2 = newRegions.findIndex(r => r.id === tenuredRegions[0].id);
-        newRegions[tenuredIndex2] = {
+        const tenuredIdx = newRegions.findIndex((r) => r.id === tenuredRegions[0].id);
+        newRegions[tenuredIdx] = {
           ...tenuredRegions[0],
-          occupancy: calculateOccupancy(tenuredRegions[0].cells)
+          occupancy: calculateOccupancy(tenuredRegions[0].cells),
         };
       }
-      
-      const edenCount = newRegions.filter(r => r.type === RegionType.EDEN).length;
+
+      const edenCount = newRegions.filter((r) => r.type === RegionType.EDEN).length;
       setCurrentEdenRegions(edenCount);
       return newRegions;
     });
   };
 
   const finalizeCopyPhase = () => {
-    setRegions(prev => {
+    setRegions((prev) => {
       const newRegions = [...prev];
-      
+
       // Finalize all copying operations
-      newRegions.forEach(region => {
-        region.cells.forEach(cell => {
+      newRegions.forEach((region) => {
+        region.cells.forEach((cell) => {
           if (cell.state === CellState.COPYING) {
             cell.state = CellState.SURVIVED;
           }
         });
-        
+
         region.occupancy = calculateOccupancy(region.cells);
       });
-      
-      // Swap Survivor spaces (From becomes To, To becomes From)
-      const survivorFromRegion = newRegions.find(r => r.type === RegionType.SURVIVOR_FROM);
-      const survivorToRegion = newRegions.find(r => r.type === RegionType.SURVIVOR_TO);
-      
-      if (survivorFromRegion && survivorToRegion) {
-        const survivorFromIndex = newRegions.findIndex(r => r.id === survivorFromRegion.id);
-        const survivorToIndex = newRegions.findIndex(r => r.id === survivorToRegion.id);
-        
-        // Swap the types
-        newRegions[survivorFromIndex].type = RegionType.SURVIVOR_TO;
-        newRegions[survivorToIndex].type = RegionType.SURVIVOR_FROM;
-      }
-      
+
       return newRegions;
     });
-    setPromoteSurvivors(false);
   };
 
   const nextStep = () => {
     if (phase === 'complete') return;
-    
-    setCurrentStep(prev => prev + 1);
-    
-    if (phase === 'allocating') {
-      const edenRegions = regions.filter(r => r.type === RegionType.EDEN);
-      const survivors = regions.filter(r => r.type === RegionType.SURVIVOR_FROM || r.type === RegionType.SURVIVOR_TO);
-      const edenNearlyFull = edenRegions.filter(r => r.occupancy >= 85).length;
-      const survivorsNearlyFull = survivors.some(r => r.occupancy >= 85);
 
-      if (edenNearlyFull >= 6 || survivorsNearlyFull) {
-        setGcCycles(prev => prev + 1);
-        if (survivorsNearlyFull) setPromoteSurvivors(true);
-        toast.info(`G1 GC iniciado - ${survivorsNearlyFull ? 'Survivor casi lleno' : 'Eden casi lleno'} • Cycle #${gcCycles + 1}`);
+    setCurrentStep((prev) => prev + 1);
+
+    if (phase === 'allocating') {
+      const edenRegions = regions.filter((r) => r.type === RegionType.EDEN);
+      const survivors = regions.filter((r) => r.type === RegionType.SURVIVOR);
+
+      const edenNearlyFullCount = edenRegions.filter((r) => r.occupancy >= 85).length;
+      const allSixEdenFullish = edenNearlyFullCount >= maxEdenRegions;
+
+      const survivorsCount = survivors.length;
+      const survivorsFullishCount = survivors.filter((r) => r.occupancy >= 85).length;
+      const survivorsAllFullish = survivorsCount >= maxSurvivorRegions && survivorsFullishCount >= maxSurvivorRegions;
+
+      if (survivorsAllFullish) {
+        setGcCycles((prev) => prev + 1);
+        toast.info(`G1 GC: Survivor lleno • Promoviendo a Tenured • Cycle #${gcCycles + 1}`);
+        setPhase('mixed-gc');
+      } else if (allSixEdenFullish) {
+        setGcCycles((prev) => prev + 1);
+        toast.info(`G1 GC iniciado - Eden casi lleno • Cycle #${gcCycles + 1}`);
         setPhase('marking');
       } else {
         simulateAllocation();
@@ -430,14 +401,82 @@ export const G1GCSimulator = () => {
       simulateMarking();
       setTimeout(() => {
         setPhase('evacuating');
-        toast.info("G1 GC: Marcado completado - Evacuando objetos vivos");
+        toast.info("G1 GC: Marcado completado - Evacuando objetos vivos a Survivors");
       }, 1200);
     } else if (phase === 'evacuating') {
       simulateEvacuation();
       setTimeout(() => {
         finalizeCopyPhase();
         setPhase('allocating');
-        toast.success(`G1 GC Cycle #${gcCycles} completado - Regiones libres para asignación`);
+        toast.success(`G1 GC Cycle #${gcCycles} completado - Eden libre para asignación`);
+      }, 1000);
+    } else if (phase === 'mixed-gc') {
+      // Promote from Survivors to Tenured prioritizing the most occupied survivor regions
+      setRegions((prev) => {
+        const newRegions = [...prev];
+        const survivorRegions = newRegions.filter((r) => r.type === RegionType.SURVIVOR);
+        const tenuredRegions = newRegions.filter((r) => r.type === RegionType.TENURED);
+
+        if (tenuredRegions.length === 0 || survivorRegions.length === 0) return newRegions;
+
+        // Sort survivors by occupancy desc to start with the fullest
+        const sortedSurvivors = [...survivorRegions].sort((a, b) => b.occupancy - a.occupancy);
+
+        // Build tenured free cells list
+        let tenuredFreeCells = tenuredRegions[0].cells
+          .filter((c) => c.state === CellState.FREE)
+          .map((c) => ({ regionId: tenuredRegions[0].id, cell: c }));
+        let tIndex = 0;
+
+        // Evacuate live objects (MARKED or SURVIVED) to tenured
+        for (const sReg of sortedSurvivors) {
+          const sRegionRef = newRegions.find((r) => r.id === sReg.id)!;
+          const liveCells = sRegionRef.cells.filter(
+            (c) => c.state === CellState.MARKED || c.state === CellState.SURVIVED || c.state === CellState.REFERENCED
+          );
+
+          for (const obj of liveCells) {
+            if (tIndex >= tenuredFreeCells.length) break;
+            const { regionId, cell: targetCell } = tenuredFreeCells[tIndex];
+            const tenuredRef = newRegions.find((r) => r.id === regionId)!;
+            const targetIdx = tenuredRef.cells.findIndex((c) => c.id === targetCell.id);
+            if (targetIdx !== -1) {
+              tenuredRef.cells[targetIdx] = {
+                ...targetCell,
+                state: CellState.COPYING,
+                survivedCycles: 0,
+              };
+              tIndex++;
+            }
+            // Clear original cell
+            const srcIdx = sRegionRef.cells.findIndex((c) => c.id === obj.id);
+            if (srcIdx !== -1) {
+              sRegionRef.cells[srcIdx] = {
+                ...sRegionRef.cells[srcIdx],
+                state: CellState.FREE,
+                survivedCycles: 0,
+              };
+            }
+          }
+
+          // Update survivor occupancy after evacuation
+          sRegionRef.occupancy = calculateOccupancy(sRegionRef.cells);
+        }
+
+        // Update tenured occupancy
+        const tenuredIdx = newRegions.findIndex((r) => r.id === tenuredRegions[0].id);
+        newRegions[tenuredIdx] = {
+          ...newRegions[tenuredIdx],
+          occupancy: calculateOccupancy(newRegions[tenuredIdx].cells),
+        };
+
+        return newRegions;
+      });
+
+      setTimeout(() => {
+        finalizeCopyPhase();
+        setPhase('allocating');
+        toast.success(`Promoción a Tenured completada • Cycle #${gcCycles}`);
       }, 1000);
     }
   };
@@ -473,6 +512,8 @@ export const G1GCSimulator = () => {
         return "bg-muted text-muted-foreground border-muted";
       case RegionType.EDEN:
         return "bg-yellow-500 text-yellow-50 border-yellow-600";
+      case RegionType.SURVIVOR:
+        return "bg-orange-500 text-orange-50 border-orange-600";
       case RegionType.SURVIVOR_FROM:
         return "bg-orange-500 text-orange-50 border-orange-600";
       case RegionType.SURVIVOR_TO:
@@ -509,6 +550,7 @@ export const G1GCSimulator = () => {
     switch (type) {
       case RegionType.UNASSIGNED: return "Unassigned";
       case RegionType.EDEN: return "Eden";
+      case RegionType.SURVIVOR: return "Survivor";
       case RegionType.SURVIVOR_FROM: return "Survivor From";
       case RegionType.SURVIVOR_TO: return "Survivor To";
       case RegionType.TENURED: return "Tenured";
