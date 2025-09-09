@@ -240,35 +240,7 @@ export const G1GCSimulator = () => {
       const targetedMode = targetedEdens.length > 0;
       const targetIds = new Set(targetedEdens.map(r => r.id));
       
-      // First, create some dereferenced objects (garbage)
-      newRegions.forEach((region) => {
-        const isYoung =
-          region.type === RegionType.EDEN ||
-          region.type === RegionType.SURVIVOR ||
-          region.type === RegionType.SURVIVOR_FROM ||
-          region.type === RegionType.SURVIVOR_TO;
-
-        if (!isYoung) return;
-        if (targetedMode && !(region.type === RegionType.EDEN && targetIds.has(region.id))) return;
-
-        region.cells.forEach((cell) => {
-          if (cell.state === CellState.REFERENCED) {
-            const p = region.type === RegionType.EDEN ? 0.7 : 0.55; // more garbage to free space
-            if (Math.random() < p) {
-              cell.state = CellState.DEREFERENCED;
-            }
-          }
-          // Survivor cells can also be dereferenced but with lower probability
-          if (cell.state === CellState.SURVIVED && region.type === RegionType.SURVIVOR) {
-            const survivorDeathRate = 0.25; // Lower probability for survivor objects
-            if (Math.random() < survivorDeathRate) {
-              cell.state = CellState.DEREFERENCED;
-            }
-          }
-        });
-      });
-      
-      // Then mark live objects (only targeted Edens if in targetedMode)
+      // During STW, no new garbage is created - only mark live objects
       newRegions.forEach(region => {
         region.cells.forEach(cell => {
           if (targetedMode) {
