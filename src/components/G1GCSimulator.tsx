@@ -137,69 +137,83 @@ export const G1GCSimulator = () => {
   };
 
   const simulateAllocation = () => {
+    let createdEden = false;
     setRegions(prev => {
-      const newRegions = [...prev];
-      let edenRegion = getAvailableEdenRegion();
-      
-      // If no available Eden region, try to assign a new one
-      if (!edenRegion && currentEdenRegions < maxEdenRegions) {
-        const newEdenId = assignNewEdenRegion();
-        if (newEdenId !== null) {
-          edenRegion = newRegions.find(r => r.id === newEdenId);
+      // deep-ish clone for safe mutations
+      const newRegions = prev.map(r => ({
+        ...r,
+        cells: r.cells.map(c => ({ ...c })),
+      }));
+
+      const edenCount = newRegions.filter(r => r.type === RegionType.EDEN).length;
+
+      const findAvailableEden = () =>
+        newRegions.find((r) => r.type === RegionType.EDEN && r.occupancy < 100);
+
+      let edenRegion = findAvailableEden();
+
+      // If no available Eden region, assign a new one randomly (up to maxEdenRegions)
+      if (!edenRegion && edenCount < maxEdenRegions) {
+        const unassigned = newRegions.filter((r) => r.type === RegionType.UNASSIGNED);
+        if (unassigned.length > 0) {
+          const chosen = unassigned[Math.floor(Math.random() * unassigned.length)];
+          chosen.type = RegionType.EDEN;
+          chosen.occupancy = 0;
+          chosen.cells = chosen.cells.map((c) => ({ ...c, state: CellState.FREE, survivedCycles: 0 }));
+          createdEden = true;
+          edenRegion = chosen;
         }
       }
-      
+
       if (!edenRegion) {
-        // All Eden regions are full, trigger GC
+        // All Eden regions are full and we can't create more yet
         return newRegions;
       }
-      
-      const regionIndex = newRegions.findIndex(r => r.id === edenRegion.id);
-      const freeCells = edenRegion.cells.filter(c => c.state === CellState.FREE);
-      
+
+      const regionIndex = newRegions.findIndex((r) => r.id === edenRegion!.id);
+      const freeCells = edenRegion!.cells.filter((c) => c.state === CellState.FREE);
+
       if (freeCells.length > 0) {
-        // Allocate 2-4 new objects
-        const allocateCount = Math.min(
-          Math.floor(Math.random() * 3) + 2, 
-          freeCells.length
-        );
-        
-        const updatedCells = [...edenRegion.cells];
+        // Allocate 3-5 new objects
+        const allocateCount = Math.min(Math.floor(Math.random() * 3) + 3, freeCells.length);
+
+        const updatedCells = [...edenRegion!.cells];
         for (let i = 0; i < allocateCount; i++) {
-          const cellIndex = updatedCells.findIndex(c => c.state === CellState.FREE);
+          const cellIndex = updatedCells.findIndex((c) => c.state === CellState.FREE);
           if (cellIndex !== -1) {
             updatedCells[cellIndex] = {
               ...updatedCells[cellIndex],
-              state: CellState.REFERENCED
+              state: CellState.REFERENCED,
             };
           }
         }
-        
-        // Randomly dereference some objects (high mortality in Eden)
-        const referencedCells = updatedCells.filter(c => c.state === CellState.REFERENCED);
-        const dereferenceCount = Math.floor(Math.random() * 3);
-        for (let i = 0; i < Math.min(dereferenceCount, referencedCells.length); i++) {
+
+        // Increase mortality in Eden: 40-70% of referenced become dereferenced
+        const referencedCells = updatedCells.filter((c) => c.state === CellState.REFERENCED);
+        const dereferenceTarget = Math.floor(referencedCells.length * (0.4 + Math.random() * 0.3));
+        for (let i = 0; i < dereferenceTarget && referencedCells.length > 0; i++) {
           const randomIndex = Math.floor(Math.random() * referencedCells.length);
-          const cellToDeref = referencedCells[randomIndex];
-          const cellIndex = updatedCells.findIndex(c => c.id === cellToDeref.id);
+          const cellToDeref = referencedCells.splice(randomIndex, 1)[0];
+          const cellIndex = updatedCells.findIndex((c) => c.id === cellToDeref.id);
           if (cellIndex !== -1) {
             updatedCells[cellIndex] = {
               ...updatedCells[cellIndex],
-              state: CellState.DEREFERENCED
+              state: CellState.DEREFERENCED,
             };
           }
-          referencedCells.splice(randomIndex, 1);
         }
-        
+
         newRegions[regionIndex] = {
-          ...edenRegion,
+          ...edenRegion!,
           cells: updatedCells,
-          occupancy: calculateOccupancy(updatedCells)
+          occupancy: calculateOccupancy(updatedCells),
         };
       }
-      
+
       return newRegions;
     });
+
+    if (createdEden) setCurrentEdenRegions((prev) => prev + 1);
   };
 
   const simulateMarking = () => {
@@ -210,8 +224,11 @@ export const G1GCSimulator = () => {
       newRegions.forEach(region => {
         if (region.type === RegionType.EDEN || region.type === RegionType.SURVIVOR_FROM || region.type === RegionType.SURVIVOR_TO) {
           region.cells.forEach(cell => {
-            if (cell.state === CellState.REFERENCED && Math.random() < 0.3) {
-              cell.state = CellState.DEREFERENCED;
+            if (cell.state === CellState.REFERENCED) {
+              const p = region.type === RegionType.EDEN ? 0.6 : 0.45; // more garbage to free space
+              if (Math.random() < p) {
+                cell.state = CellState.DEREFERENCED;
+              }
             }
           });
         }
