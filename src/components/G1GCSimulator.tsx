@@ -108,7 +108,7 @@ export const G1GCSimulator = () => {
   const getAvailableEdenRegion = () => {
     return regions.find(r => 
       r.type === RegionType.EDEN && 
-      r.occupancy < 100
+      r.cells.some(c => c.state === CellState.FREE)
     );
   };
 
@@ -151,7 +151,7 @@ export const G1GCSimulator = () => {
       const edenCount = newRegions.filter(r => r.type === RegionType.EDEN).length;
 
       const findAvailableEden = () =>
-        newRegions.find((r) => r.type === RegionType.EDEN && r.occupancy < 100);
+        newRegions.find((r) => r.type === RegionType.EDEN && r.cells.some((c) => c.state === CellState.FREE));
 
       let edenRegion = findAvailableEden();
 
@@ -213,8 +213,9 @@ export const G1GCSimulator = () => {
           occupancy: newOcc,
         };
 
-        // If this Eden just became full, immediately create a new Eden (random unassigned) up to maxEdenRegions
-        if (newOcc >= 100) {
+        // If this Eden just ran out of FREE cells, immediately create a new Eden (random unassigned) up to maxEdenRegions
+        const hasFreeAfter = updatedCells.some((c) => c.state === CellState.FREE);
+        if (!hasFreeAfter) {
           const currentEdenCount = newRegions.filter((r) => r.type === RegionType.EDEN).length;
           if (currentEdenCount < maxEdenRegions) {
             const unassignedNow = newRegions.filter((r) => r.type === RegionType.UNASSIGNED);
