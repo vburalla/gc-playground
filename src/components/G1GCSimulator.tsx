@@ -45,7 +45,7 @@ export const G1GCSimulator = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [gcCycles, setGcCycles] = useState(0);
   const [phase, setPhase] = useState<'allocating' | 'marking' | 'evacuating' | 'concurrent-marking' | 'mixed-gc' | 'complete'>('allocating');
-  const [gridSize, setGridSize] = useState(4); // 4x4 grid of regions
+  const [gridSize, setGridSize] = useState(5); // 5x5 grid of regions
   const [speed, setSpeed] = useState(800);
   const [regionSize] = useState(4); // 4x4 cells per region (16 cells)
   const [currentEdenRegions, setCurrentEdenRegions] = useState(0);

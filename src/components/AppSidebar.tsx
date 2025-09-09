@@ -85,9 +85,9 @@ export function AppSidebar({
                     </>
                   ) : collectorType === 'g1' ? (
                     <>
-                      <option value={4}>4x4 (16 regiones)</option>
                       <option value={5}>5x5 (25 regiones)</option>
                       <option value={6}>6x6 (36 regiones)</option>
+                      <option value={7}>7x7 (49 regiones)</option>
                     </>
                   ) : (
                     <>
