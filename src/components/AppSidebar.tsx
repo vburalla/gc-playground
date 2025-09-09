@@ -22,7 +22,7 @@ interface AppSidebarProps {
   onToggleSimulation: () => void;
   onNextStep: () => void;
   onReset: () => void;
-  collectorType?: 'non-moving' | 'compacting' | 'copy' | 'generational';
+  collectorType?: 'non-moving' | 'compacting' | 'copy' | 'generational' | 'g1';
   activeSpace?: 'from' | 'to';
   tenureThreshold?: number;
   setTenureThreshold?: (threshold: number) => void;
@@ -60,20 +60,34 @@ export function AppSidebar({
             <div className="space-y-4 p-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">
-                  {!isCollapsed && (collectorType === 'generational' ? "Tamaño Eden Space" : "Tamaño de Memoria")}
+                  {!isCollapsed && (
+                    collectorType === 'generational' ? "Tamaño Eden Space" : 
+                    collectorType === 'g1' ? "Grid de Regiones" : 
+                    "Tamaño de Memoria"
+                  )}
                 </label>
                 <select 
                   value={gridSize} 
                   onChange={(e) => setGridSize(Number(e.target.value))}
                   disabled={isRunning}
                   className="w-full p-2 rounded border bg-background text-foreground text-sm"
-                  title={collectorType === 'generational' ? "Tamaño Eden Space" : "Tamaño de Memoria"}
+                  title={
+                    collectorType === 'generational' ? "Tamaño Eden Space" : 
+                    collectorType === 'g1' ? "Grid de Regiones" : 
+                    "Tamaño de Memoria"
+                  }
                 >
                   {collectorType === 'generational' ? (
                     <>
                       <option value={4}>13x10 (Eden: 4 celdas)</option>
                       <option value={6}>19x15 (Eden: 6 celdas)</option>
                       <option value={8}>26x20 (Eden: 8 celdas)</option>
+                    </>
+                  ) : collectorType === 'g1' ? (
+                    <>
+                      <option value={6}>6x6 (36 regiones)</option>
+                      <option value={8}>8x8 (64 regiones)</option>
+                      <option value={10}>10x10 (100 regiones)</option>
                     </>
                   ) : (
                     <>
@@ -137,7 +151,11 @@ export function AppSidebar({
                   <p className="text-sm text-muted-foreground">Paso: {currentStep}</p>
                   <p className="text-sm text-muted-foreground">Ciclos GC: {gcCycles}</p>
                   <p className="text-sm text-muted-foreground">Fase: {phase}</p>
-                  <p className="text-sm text-muted-foreground">Celdas: {collectorType === 'generational' ? `Eden ${gridSize}` : `${gridSize}x${gridSize}`}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {collectorType === 'generational' ? `Eden ${gridSize}` : 
+                     collectorType === 'g1' ? `Grid ${gridSize}x${gridSize}` : 
+                     `${gridSize}x${gridSize}`}
+                  </p>
                   {collectorType === 'copy' && activeSpace && (
                     <p className="text-sm text-muted-foreground">Activo: {activeSpace === 'from' ? 'From' : 'To'} Space</p>
                   )}
@@ -192,7 +210,17 @@ export function AppSidebar({
             <SidebarGroupContent>
               <div className="p-4">
                 <ol className="text-sm space-y-1 text-muted-foreground">
-                  {collectorType === 'generational' ? (
+                  {collectorType === 'g1' ? (
+                    <>
+                      <li>1. Allocate objects in Eden regions</li>
+                      <li>2. Eden regions full → G1 GC</li>
+                      <li>3. Mark all live objects</li>
+                      <li>4. Evacuate live objects to Survivor</li>
+                      <li>5. Assign new regions dynamically</li>
+                      <li>6. Clear collected regions</li>
+                      <li>7. Resume allocation</li>
+                    </>
+                  ) : collectorType === 'generational' ? (
                     <>
                       <li>1. Allocate objects in Eden Space</li>
                       <li>2. Eden is full → Minor GC</li>

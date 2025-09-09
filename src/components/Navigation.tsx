@@ -53,6 +53,16 @@ export const Navigation = () => {
                 Generational GC
               </NavLink>
             </Button>
+            <Button asChild size="sm">
+              <NavLink 
+                to="/g1" 
+                className={({ isActive }) => 
+                  `transition-all ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`
+                }
+              >
+                G1 GC
+              </NavLink>
+            </Button>
           </nav>
         </div>
       </div>
