@@ -225,6 +225,24 @@ export const G1GCSimulator = () => {
         }
       }
 
+      // Also handle Survivor region creation when they get full
+      const survivorRegions = newRegions.filter(r => r.type === RegionType.SURVIVOR);
+      
+      // Check if we need to create a new Survivor region when existing ones are full
+      const fullSurvivors = survivorRegions.filter(s => s.cells.every(c => c.state !== CellState.FREE));
+      
+      if (fullSurvivors.length > 0 && survivorRegions.length < maxSurvivorRegions) {
+        // Create one new survivor when any existing survivor is full
+        const unassignedForSurvivor = newRegions.filter(r => r.type === RegionType.UNASSIGNED);
+        if (unassignedForSurvivor.length > 0) {
+          const chosen = unassignedForSurvivor[Math.floor(Math.random() * unassignedForSurvivor.length)];
+          chosen.type = RegionType.SURVIVOR;
+          chosen.occupancy = 0;
+          chosen.cells = chosen.cells.map(c => ({ ...c, state: CellState.FREE, survivedCycles: 0 }));
+          toast.info(`Nuevo Survivor creado - Total: ${survivorRegions.length + 1}/${maxSurvivorRegions}`);
+        }
+      }
+
       return newRegions;
     });
 
