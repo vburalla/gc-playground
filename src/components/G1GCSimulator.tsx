@@ -50,7 +50,7 @@ export const G1GCSimulator = () => {
   const [regionSize] = useState(4); // 4x4 cells per region (16 cells)
   const [currentEdenRegions, setCurrentEdenRegions] = useState(0);
   const maxEdenRegions = 6; // Eden regions (objetivo)
-  const maxSurvivorRegions = 3; // Survivor regions (half of Eden)
+  const maxSurvivorRegions = 2; // Maximum 2 Survivor regions
   const [promoteSurvivors, setPromoteSurvivors] = useState(false);
 
   // Initialize G1 heap with regions
@@ -299,9 +299,9 @@ export const G1GCSimulator = () => {
       const edenRegions = newRegions.filter((r) => r.type === RegionType.EDEN && r.shouldCollect);
       let survivorRegions = newRegions.filter((r) => r.type === RegionType.SURVIVOR);
 
-      // Create Survivor regions dynamically if needed (up to 3)
+      // Create Survivor regions dynamically if needed (up to 2)
       const markedFromEden = edenRegions.flatMap(r => r.cells.filter(c => c.state === CellState.MARKED));
-      const survivorsNeeded = Math.min(3, Math.ceil(markedFromEden.length / 16));
+      const survivorsNeeded = Math.min(2, Math.ceil(markedFromEden.length / 16));
       
       while (survivorRegions.length < survivorsNeeded) {
         const unassigned = newRegions.filter(r => r.type === RegionType.UNASSIGNED);
@@ -417,13 +417,14 @@ export const G1GCSimulator = () => {
         edenRegions.length >= maxEdenRegions &&
         edenRegions.every((r) => r.cells.every((c) => c.state !== CellState.FREE));
 
+      // Check if both survivors are full (no FREE cells)
       const survivorsCount = survivors.length;
-      const survivorsFullishCount = survivors.filter((r) => r.occupancy >= 85).length;
-      const survivorsAllFullish = survivorsCount >= maxSurvivorRegions && survivorsFullishCount >= maxSurvivorRegions;
+      const survivorsBothFull = survivorsCount >= maxSurvivorRegions && 
+        survivors.every((r) => r.cells.every((c) => c.state !== CellState.FREE));
 
-      if (survivorsAllFullish) {
+      if (survivorsBothFull) {
         setGcCycles((prev) => prev + 1);
-        toast.info(`G1 GC: Survivor lleno • Promoviendo a Tenured • Cycle #${gcCycles + 1}`);
+        toast.info(`G1 GC: Ambos Survivors llenos • Promoviendo a Tenured • Cycle #${gcCycles + 1}`);
         setPhase('mixed-gc');
       } else if (allSixEdenFull) {
         // Mark only the 2 Eden regions with most garbage for collection
