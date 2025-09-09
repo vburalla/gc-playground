@@ -50,7 +50,7 @@ export const G1GCSimulator = () => {
   const [regionSize] = useState(4); // 4x4 cells per region (16 cells)
   const [currentEdenRegions, setCurrentEdenRegions] = useState(0);
   const maxEdenRegions = 6; // Eden regions (objetivo)
-  const maxSurvivorRegions = 2; // Maximum 2 Survivor regions
+  const maxSurvivorRegions = 3; // Maximum 3 Survivor regions
   const [promoteSurvivors, setPromoteSurvivors] = useState(false);
 
   // Initialize G1 heap with regions
@@ -275,9 +275,9 @@ export const G1GCSimulator = () => {
       const edenRegions = newRegions.filter((r) => r.type === RegionType.EDEN && r.shouldCollect);
       let survivorRegions = newRegions.filter((r) => r.type === RegionType.SURVIVOR);
 
-      // Create Survivor regions dynamically if needed (up to 2)
+      // Create Survivor regions dynamically if needed (up to 3)
       const markedFromEden = edenRegions.flatMap(r => r.cells.filter(c => c.state === CellState.MARKED));
-      const survivorsNeeded = Math.min(2, Math.ceil(markedFromEden.length / 16));
+      const survivorsNeeded = Math.min(3, Math.ceil(markedFromEden.length / 16));
       
       while (survivorRegions.length < survivorsNeeded) {
         const unassigned = newRegions.filter(r => r.type === RegionType.UNASSIGNED);
@@ -393,14 +393,14 @@ export const G1GCSimulator = () => {
         edenRegions.length >= maxEdenRegions &&
         edenRegions.every((r) => r.cells.every((c) => c.state !== CellState.FREE));
 
-      // Check if both survivors are full (no FREE cells)
+      // Check if all 3 survivors are full (no FREE cells)
       const survivorsCount = survivors.length;
-      const survivorsBothFull = survivorsCount >= maxSurvivorRegions && 
+      const survivorsAllFull = survivorsCount >= maxSurvivorRegions && 
         survivors.every((r) => r.cells.every((c) => c.state !== CellState.FREE));
 
-      if (survivorsBothFull) {
+      if (survivorsAllFull) {
         setGcCycles((prev) => prev + 1);
-        toast.info(`G1 GC: Ambos Survivors llenos • Promoviendo a Tenured • Cycle #${gcCycles + 1}`);
+        toast.info(`G1 GC: Todos los Survivors llenos • Promoviendo a Tenured • Cycle #${gcCycles + 1}`);
         setPhase('mixed-gc');
       } else if (allSixEdenFull) {
         // Mark only the 2 Eden regions with most garbage for collection
@@ -461,7 +461,7 @@ export const G1GCSimulator = () => {
         toast.success(`G1 GC Cycle #${gcCycles} completado - Eden libre para asignación`);
       }
     } else if (phase === 'mixed-gc') {
-      // Promote from Survivors to Tenured prioritizing the most occupied survivor regions
+      // Promote from the 2 Survivors with most garbage to Tenured
       setRegions((prev) => {
         const newRegions = [...prev];
         const survivorRegions = newRegions.filter((r) => r.type === RegionType.SURVIVOR);
@@ -469,9 +469,20 @@ export const G1GCSimulator = () => {
 
         if (survivorRegions.length === 0) return newRegions;
 
+        // Calculate garbage count (dereferenced cells) for each Survivor region
+        const survivorsWithGarbage = survivorRegions.map(region => ({
+          region,
+          garbageCount: region.cells.filter(c => c.state === CellState.DEREFERENCED).length
+        }));
+        
+        // Sort by garbage count (descending) and take top 2
+        const topTwoGarbageSurvivors = survivorsWithGarbage
+          .sort((a, b) => b.garbageCount - a.garbageCount)
+          .slice(0, 2);
+
         // Create Tenured regions dynamically if needed
-        const survivorLiveCells = survivorRegions.flatMap(r => 
-          r.cells.filter(c => c.state === CellState.MARKED || c.state === CellState.SURVIVED || c.state === CellState.REFERENCED)
+        const survivorLiveCells = topTwoGarbageSurvivors.flatMap(({ region }) => 
+          region.cells.filter(c => c.state === CellState.MARKED || c.state === CellState.SURVIVED || c.state === CellState.REFERENCED)
         );
         const tenuredNeeded = Math.min(2, Math.ceil(survivorLiveCells.length / 16));
         
@@ -488,9 +499,6 @@ export const G1GCSimulator = () => {
 
         if (tenuredRegions.length === 0) return newRegions;
 
-        // Sort survivors by occupancy desc to start with the fullest
-        const sortedSurvivors = [...survivorRegions].sort((a, b) => b.occupancy - a.occupancy);
-
         // Build tenured free cells list
         let tenuredFreeCells = tenuredRegions.flatMap(tr =>
           tr.cells
@@ -499,9 +507,9 @@ export const G1GCSimulator = () => {
         );
         let tIndex = 0;
 
-        // Evacuate live objects (MARKED or SURVIVED) to tenured
-        for (const sReg of sortedSurvivors) {
-          const sRegionRef = newRegions.find((r) => r.id === sReg.id)!;
+        // Evacuate live objects from the 2 survivors with most garbage to tenured
+        for (const { region } of topTwoGarbageSurvivors) {
+          const sRegionRef = newRegions.find((r) => r.id === region.id)!;
           const liveCells = sRegionRef.cells.filter(
             (c) => c.state === CellState.MARKED || c.state === CellState.SURVIVED || c.state === CellState.REFERENCED
           );
@@ -519,19 +527,16 @@ export const G1GCSimulator = () => {
               };
               tIndex++;
             }
-            // Clear original cell
-            const srcIdx = sRegionRef.cells.findIndex((c) => c.id === obj.id);
-            if (srcIdx !== -1) {
-              sRegionRef.cells[srcIdx] = {
-                ...sRegionRef.cells[srcIdx],
-                state: CellState.FREE,
-                survivedCycles: 0,
-              };
-            }
           }
 
-          // Update survivor occupancy after evacuation
-          sRegionRef.occupancy = calculateOccupancy(sRegionRef.cells);
+          // Clear the entire survivor region and mark as UNASSIGNED
+          sRegionRef.type = RegionType.UNASSIGNED;
+          sRegionRef.cells = sRegionRef.cells.map(c => ({
+            ...c,
+            state: CellState.FREE,
+            survivedCycles: 0,
+          }));
+          sRegionRef.occupancy = 0;
         }
 
         // Update tenured occupancies
