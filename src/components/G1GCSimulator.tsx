@@ -225,6 +225,25 @@ export const G1GCSimulator = () => {
         }
       }
 
+      // Also simulate memory deallocation in Survivor regions (30-40% probability)
+      newRegions.forEach((region) => {
+        if (region.type === RegionType.SURVIVOR) {
+          region.cells = region.cells.map((cell) => {
+            if (cell.state === CellState.SURVIVED || cell.state === CellState.REFERENCED) {
+              // 30-40% chance of becoming garbage in Survivor
+              const deathRate = 0.3 + Math.random() * 0.1; // 30-40%
+              return Math.random() < deathRate 
+                ? { ...cell, state: CellState.DEREFERENCED }
+                : cell;
+            }
+            return cell;
+          });
+          
+          // Update occupancy after deallocation
+          region.occupancy = calculateOccupancy(region.cells);
+        }
+      });
+
       // Also handle Survivor region creation when they get full
       const survivorRegions = newRegions.filter(r => r.type === RegionType.SURVIVOR);
       
