@@ -254,6 +254,13 @@ export const G1GCSimulator = () => {
               cell.state = CellState.DEREFERENCED;
             }
           }
+          // Survivor cells can also be dereferenced but with lower probability
+          if (cell.state === CellState.SURVIVED && region.type === RegionType.SURVIVOR) {
+            const survivorDeathRate = 0.25; // Lower probability for survivor objects
+            if (Math.random() < survivorDeathRate) {
+              cell.state = CellState.DEREFERENCED;
+            }
+          }
         });
       });
       
