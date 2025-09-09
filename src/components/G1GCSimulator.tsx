@@ -30,6 +30,7 @@ export interface Region {
   cells: MemoryCell[];
   occupancy: number; // 0-100%
   shouldCollect?: boolean; // For marking specific regions for collection
+  createdAt: number; // Timestamp when the region was created/assigned
 }
 
 export interface MemoryCell {
@@ -79,15 +80,17 @@ export const G1GCSimulator = () => {
         id: i,
         type: RegionType.UNASSIGNED,
         cells,
-        occupancy: 0
+        occupancy: 0,
+        createdAt: Date.now()
       });
     }
     
-    // Assign initial regions: only 1 Eden, rest unassigned
-    if (newRegions.length >= 1) {
-      const randomIndex = Math.floor(Math.random() * newRegions.length);
-      newRegions[randomIndex].type = RegionType.EDEN;
-    }
+      // Assign initial regions: only 1 Eden, rest unassigned
+      if (newRegions.length >= 1) {
+        const randomIndex = Math.floor(Math.random() * newRegions.length);
+        newRegions[randomIndex].type = RegionType.EDEN;
+        newRegions[randomIndex].createdAt = Date.now(); // Update timestamp when changing type
+      }
     
     setRegions(newRegions);
     setCurrentStep(0);
@@ -153,6 +156,7 @@ export const G1GCSimulator = () => {
           const chosen = unassigned[Math.floor(Math.random() * unassigned.length)];
           chosen.type = RegionType.EDEN;
           chosen.occupancy = 0;
+          chosen.createdAt = Date.now();
           chosen.cells = chosen.cells.map((c) => ({ ...c, state: CellState.FREE, survivedCycles: 0 }));
           createdEden = true;
           edenRegion = chosen;
@@ -218,6 +222,7 @@ export const G1GCSimulator = () => {
               const chosen = unassignedNow[Math.floor(Math.random() * unassignedNow.length)];
               chosen.type = RegionType.EDEN;
               chosen.occupancy = 0;
+              chosen.createdAt = Date.now();
               chosen.cells = chosen.cells.map((c) => ({ ...c, state: CellState.FREE, survivedCycles: 0 }));
               createdEden = true;
             }
@@ -268,6 +273,7 @@ export const G1GCSimulator = () => {
             const chosen = unassignedForSurvivor[Math.floor(Math.random() * unassignedForSurvivor.length)];
             chosen.type = RegionType.SURVIVOR;
             chosen.occupancy = 0;
+            chosen.createdAt = Date.now();
             chosen.cells = chosen.cells.map(c => ({ ...c, state: CellState.FREE, survivedCycles: 0 }));
             toast.info(`Nuevo Survivor creado - Total: ${survivorRegions.length + 1}/${maxSurvivorRegions}`);
           }
@@ -335,6 +341,7 @@ export const G1GCSimulator = () => {
         const chosen = unassigned[Math.floor(Math.random() * unassigned.length)];
         chosen.type = RegionType.SURVIVOR;
         chosen.occupancy = 0;
+        chosen.createdAt = Date.now();
         chosen.cells = chosen.cells.map(c => ({ ...c, state: CellState.FREE, survivedCycles: 0 }));
         survivorRegions.push(chosen);
       }
@@ -452,24 +459,28 @@ export const G1GCSimulator = () => {
         toast.info(`G1 GC: Todos los Survivors llenos • Promoviendo a Tenured • Cycle #${gcCycles + 1}`);
         setPhase('mixed-gc');
       } else if (allSixEdenFull) {
-        // Mark only the 2 Eden regions with most garbage for collection
+        // Mark only the 2 Eden regions with most garbage AND oldest for collection
         setRegions(prev => {
           const newRegions = [...prev];
           const edenRegions = newRegions.filter(r => r.type === RegionType.EDEN);
           
-          // Calculate garbage count (dereferenced cells) for each Eden region
-          const edenWithGarbage = edenRegions.map(region => ({
+          // Calculate garbage count and age for each Eden region
+          const edenWithGarbageAndAge = edenRegions.map(region => ({
             region,
-            garbageCount: region.cells.filter(c => c.state === CellState.DEREFERENCED).length
+            garbageCount: region.cells.filter(c => c.state === CellState.DEREFERENCED).length,
+            age: Date.now() - region.createdAt
           }));
           
-          // Sort by garbage count (descending) and take top 2
-          const topTwoGarbageRegions = edenWithGarbage
-            .sort((a, b) => b.garbageCount - a.garbageCount)
+          // Sort by garbage count (descending) first, then by age (descending) and take top 2
+          const topTwoRegions = edenWithGarbageAndAge
+            .sort((a, b) => {
+              const garbageDiff = b.garbageCount - a.garbageCount;
+              return garbageDiff !== 0 ? garbageDiff : b.age - a.age;
+            })
             .slice(0, 2);
           
           // Mark only these 2 regions for collection
-          topTwoGarbageRegions.forEach(({ region }) => {
+          topTwoRegions.forEach(({ region }) => {
             const regionIndex = newRegions.findIndex(r => r.id === region.id);
             if (regionIndex !== -1) {
               newRegions[regionIndex] = { ...newRegions[regionIndex], shouldCollect: true };
@@ -518,19 +529,23 @@ export const G1GCSimulator = () => {
 
         if (survivorRegions.length === 0) return newRegions;
 
-        // Calculate garbage count (dereferenced cells) for each Survivor region
-        const survivorsWithGarbage = survivorRegions.map(region => ({
+        // Calculate garbage count and age for each Survivor region
+        const survivorWithGarbageAndAge = survivorRegions.map(region => ({
           region,
-          garbageCount: region.cells.filter(c => c.state === CellState.DEREFERENCED).length
+          garbageCount: region.cells.filter(c => c.state === CellState.DEREFERENCED).length,
+          age: Date.now() - region.createdAt
         }));
-        
-        // Sort by garbage count (descending) and take top 2
-        const topTwoGarbageSurvivors = survivorsWithGarbage
-          .sort((a, b) => b.garbageCount - a.garbageCount)
-          .slice(0, 2);
+
+        // Sort by garbage count (descending) first, then by age (descending) and take only the top 1
+        const topGarbageSurvivor = survivorWithGarbageAndAge
+          .sort((a, b) => {
+            const garbageDiff = b.garbageCount - a.garbageCount;
+            return garbageDiff !== 0 ? garbageDiff : b.age - a.age;
+          })
+          .slice(0, 1);
 
         // Create Tenured regions dynamically if needed
-        const survivorLiveCells = topTwoGarbageSurvivors.flatMap(({ region }) => 
+        const survivorLiveCells = topGarbageSurvivor.flatMap(({ region }) => 
           region.cells.filter(c => c.state === CellState.MARKED || c.state === CellState.SURVIVED || c.state === CellState.REFERENCED)
         );
         const tenuredNeeded = Math.min(2, Math.ceil(survivorLiveCells.length / 16));
@@ -542,6 +557,7 @@ export const G1GCSimulator = () => {
           const chosen = unassigned[Math.floor(Math.random() * unassigned.length)];
           chosen.type = RegionType.TENURED;
           chosen.occupancy = 0;
+          chosen.createdAt = Date.now();
           chosen.cells = chosen.cells.map(c => ({ ...c, state: CellState.FREE, survivedCycles: 0 }));
           tenuredRegions.push(chosen);
         }
@@ -556,8 +572,8 @@ export const G1GCSimulator = () => {
         );
         let tIndex = 0;
 
-        // Evacuate live objects from the 2 survivors with most garbage to tenured
-        for (const { region } of topTwoGarbageSurvivors) {
+        // Evacuate live objects from the 1 survivor with most garbage to tenured
+        for (const { region } of topGarbageSurvivor) {
           const sRegionRef = newRegions.find((r) => r.id === region.id)!;
           const liveCells = sRegionRef.cells.filter(
             (c) => c.state === CellState.MARKED || c.state === CellState.SURVIVED || c.state === CellState.REFERENCED
@@ -580,6 +596,7 @@ export const G1GCSimulator = () => {
 
           // Clear the entire survivor region and mark as UNASSIGNED
           sRegionRef.type = RegionType.UNASSIGNED;
+          sRegionRef.createdAt = Date.now(); // Reset timestamp when becoming unassigned
           sRegionRef.cells = sRegionRef.cells.map(c => ({
             ...c,
             state: CellState.FREE,
