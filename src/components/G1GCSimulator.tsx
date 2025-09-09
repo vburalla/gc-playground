@@ -230,32 +230,52 @@ export const G1GCSimulator = () => {
   const simulateMarking = () => {
     setRegions(prev => {
       const newRegions = [...prev];
+
+      // Determine if we are targeting specific Eden regions (shouldCollect)
+      const targetedEdens = newRegions.filter(r => r.type === RegionType.EDEN && r.shouldCollect);
+      const targetedMode = targetedEdens.length > 0;
+      const targetIds = new Set(targetedEdens.map(r => r.id));
       
       // First, create some dereferenced objects (garbage)
       newRegions.forEach((region) => {
-        if (
+        const isYoung =
           region.type === RegionType.EDEN ||
           region.type === RegionType.SURVIVOR ||
           region.type === RegionType.SURVIVOR_FROM ||
-          region.type === RegionType.SURVIVOR_TO
-        ) {
-          region.cells.forEach((cell) => {
-            if (cell.state === CellState.REFERENCED) {
-              const p = region.type === RegionType.EDEN ? 0.7 : 0.55; // more garbage to free space
-              if (Math.random() < p) {
-                cell.state = CellState.DEREFERENCED;
-              }
+          region.type === RegionType.SURVIVOR_TO;
+
+        if (!isYoung) return;
+        if (targetedMode && !(region.type === RegionType.EDEN && targetIds.has(region.id))) return;
+
+        region.cells.forEach((cell) => {
+          if (cell.state === CellState.REFERENCED) {
+            const p = region.type === RegionType.EDEN ? 0.7 : 0.55; // more garbage to free space
+            if (Math.random() < p) {
+              cell.state = CellState.DEREFERENCED;
             }
-          });
-        }
+          }
+        });
       });
       
-      // Then mark all live objects
+      // Then mark live objects (only targeted Edens if in targetedMode)
       newRegions.forEach(region => {
         region.cells.forEach(cell => {
-          if (cell.state === CellState.REFERENCED || 
-              (cell.state === CellState.SURVIVED && cell.survivedCycles > 0)) {
-            cell.state = CellState.MARKED;
+          if (targetedMode) {
+            if (region.type === RegionType.EDEN && targetIds.has(region.id)) {
+              if (
+                cell.state === CellState.REFERENCED ||
+                (cell.state === CellState.SURVIVED && cell.survivedCycles > 0)
+              ) {
+                cell.state = CellState.MARKED;
+              }
+            }
+          } else {
+            if (
+              cell.state === CellState.REFERENCED ||
+              (cell.state === CellState.SURVIVED && cell.survivedCycles > 0)
+            ) {
+              cell.state = CellState.MARKED;
+            }
           }
         });
         
@@ -434,17 +454,28 @@ export const G1GCSimulator = () => {
       }
     } else if (phase === 'marking') {
       simulateMarking();
-      setTimeout(() => {
+      if (isRunning) {
+        setTimeout(() => {
+          setPhase('evacuating');
+          toast.info("G1 GC: Marcado completado - Evacuando objetos vivos a Survivors");
+        }, 1200);
+      } else {
         setPhase('evacuating');
         toast.info("G1 GC: Marcado completado - Evacuando objetos vivos a Survivors");
-      }, 1200);
+      }
     } else if (phase === 'evacuating') {
       simulateEvacuation();
-      setTimeout(() => {
+      if (isRunning) {
+        setTimeout(() => {
+          finalizeCopyPhase();
+          setPhase('allocating');
+          toast.success(`G1 GC Cycle #${gcCycles} completado - Eden libre para asignación`);
+        }, 1000);
+      } else {
         finalizeCopyPhase();
         setPhase('allocating');
         toast.success(`G1 GC Cycle #${gcCycles} completado - Eden libre para asignación`);
-      }, 1000);
+      }
     } else if (phase === 'mixed-gc') {
       // Promote from Survivors to Tenured prioritizing the most occupied survivor regions
       setRegions((prev) => {
@@ -531,11 +562,17 @@ export const G1GCSimulator = () => {
         return newRegions;
       });
 
-      setTimeout(() => {
+      if (isRunning) {
+        setTimeout(() => {
+          finalizeCopyPhase();
+          setPhase('allocating');
+          toast.success(`Promoción a Tenured completada • Cycle #${gcCycles}`);
+        }, 1000);
+      } else {
         finalizeCopyPhase();
         setPhase('allocating');
         toast.success(`Promoción a Tenured completada • Cycle #${gcCycles}`);
-      }, 1000);
+      }
     }
   };
 
