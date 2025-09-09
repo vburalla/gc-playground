@@ -183,8 +183,12 @@ export const G1GCSimulator = () => {
         }
 
         // Increase mortality in Eden: 55-85% of referenced become dereferenced
+        // But ensure at least 20% remain alive (minimum 1 cell)
         const referencedCells = updatedCells.filter((c) => c.state === CellState.REFERENCED);
-        const dereferenceTarget = Math.floor(referencedCells.length * (0.55 + Math.random() * 0.3));
+        const minAliveCells = Math.max(1, Math.ceil(referencedCells.length * 0.2));
+        const maxToDeref = Math.max(0, referencedCells.length - minAliveCells);
+        const dereferenceTarget = Math.min(maxToDeref, Math.floor(referencedCells.length * (0.55 + Math.random() * 0.3)));
+        
         for (let i = 0; i < dereferenceTarget && referencedCells.length > 0; i++) {
           const randomIndex = Math.floor(Math.random() * referencedCells.length);
           const cellToDeref = referencedCells.splice(randomIndex, 1)[0];
@@ -610,24 +614,40 @@ export const G1GCSimulator = () => {
   }, [gridSize]);
 
   const getRegionColor = (region: Region) => {
+    let baseColor = "";
     switch (region.type) {
       case RegionType.UNASSIGNED:
-        return "bg-muted text-muted-foreground border-muted";
+        baseColor = "bg-muted text-muted-foreground border-muted";
+        break;
       case RegionType.EDEN:
-        return "bg-yellow-500 text-yellow-50 border-yellow-600";
+        baseColor = "bg-yellow-500 text-yellow-50 border-yellow-600";
+        break;
       case RegionType.SURVIVOR:
-        return "bg-orange-500 text-orange-50 border-orange-600";
+        baseColor = "bg-orange-500 text-orange-50 border-orange-600";
+        break;
       case RegionType.SURVIVOR_FROM:
-        return "bg-orange-500 text-orange-50 border-orange-600";
+        baseColor = "bg-orange-500 text-orange-50 border-orange-600";
+        break;
       case RegionType.SURVIVOR_TO:
-        return "bg-orange-400 text-orange-50 border-orange-500";
+        baseColor = "bg-orange-400 text-orange-50 border-orange-500";
+        break;
       case RegionType.TENURED:
-        return "bg-blue-400 text-blue-50 border-blue-500";
+        baseColor = "bg-blue-400 text-blue-50 border-blue-500";
+        break;
       case RegionType.HUMONGOUS:
-        return "bg-red-500 text-red-50 border-red-600";
+        baseColor = "bg-red-500 text-red-50 border-red-600";
+        break;
       default:
-        return "bg-muted text-muted-foreground border-muted";
+        baseColor = "bg-muted text-muted-foreground border-muted";
+        break;
     }
+    
+    // Add special styling for regions marked for collection
+    if (region.shouldCollect) {
+      baseColor += " ring-4 ring-red-400 ring-opacity-80 shadow-lg shadow-red-400/50";
+    }
+    
+    return baseColor;
   };
 
   const getCellColor = (cell: MemoryCell) => {
@@ -710,6 +730,12 @@ export const G1GCSimulator = () => {
             >
               {regions.map((region) => (
                 <div key={region.id} className="relative">
+                  {/* Indicator for regions marked for collection */}
+                  {region.shouldCollect && (
+                    <div className="absolute -top-2 -right-2 z-10 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold shadow-lg animate-pulse">
+                      GC
+                    </div>
+                  )}
                   <div
                     className={`
                       p-1 rounded transition-all duration-300 border-2
@@ -720,7 +746,7 @@ export const G1GCSimulator = () => {
                       minWidth: `${Math.max(48, 400/gridSize)}px`,
                       minHeight: `${Math.max(48, 400/gridSize)}px`
                     }}
-                    title={`Region ${region.id}: ${getRegionTypeLabel(region.type)} (${region.occupancy}% occupied)`}
+                    title={`Region ${region.id}: ${getRegionTypeLabel(region.type)} (${region.occupancy}% occupied)${region.shouldCollect ? ' - MARCADA PARA LIMPIEZA' : ''}`}
                   >
                     <div 
                       className="grid gap-0"
