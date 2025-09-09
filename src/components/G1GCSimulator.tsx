@@ -29,6 +29,7 @@ export interface Region {
   type: RegionType;
   cells: MemoryCell[];
   occupancy: number; // 0-100%
+  shouldCollect?: boolean; // For marking specific regions for collection
 }
 
 export interface MemoryCell {
@@ -268,7 +269,7 @@ export const G1GCSimulator = () => {
   const simulateEvacuation = () => {
     setRegions(prev => {
       const newRegions = [...prev];
-      const edenRegions = newRegions.filter((r) => r.type === RegionType.EDEN);
+      const edenRegions = newRegions.filter((r) => r.type === RegionType.EDEN && r.shouldCollect);
       let survivorRegions = newRegions.filter((r) => r.type === RegionType.SURVIVOR);
 
       // Create Survivor regions dynamically if needed (up to 3)
@@ -330,7 +331,15 @@ export const G1GCSimulator = () => {
             survivedCycles: 0,
           })),
           occupancy: 0,
+          shouldCollect: false,
         };
+      });
+      
+      // Clear shouldCollect flag from all regions
+      newRegions.forEach(region => {
+        if (region.shouldCollect) {
+          region.shouldCollect = false;
+        }
       });
 
       // Update occupancies
@@ -390,8 +399,35 @@ export const G1GCSimulator = () => {
         toast.info(`G1 GC: Survivor lleno • Promoviendo a Tenured • Cycle #${gcCycles + 1}`);
         setPhase('mixed-gc');
       } else if (allSixEdenFull) {
+        // Mark only the 2 Eden regions with most garbage for collection
+        setRegions(prev => {
+          const newRegions = [...prev];
+          const edenRegions = newRegions.filter(r => r.type === RegionType.EDEN);
+          
+          // Calculate garbage count (dereferenced cells) for each Eden region
+          const edenWithGarbage = edenRegions.map(region => ({
+            region,
+            garbageCount: region.cells.filter(c => c.state === CellState.DEREFERENCED).length
+          }));
+          
+          // Sort by garbage count (descending) and take top 2
+          const topTwoGarbageRegions = edenWithGarbage
+            .sort((a, b) => b.garbageCount - a.garbageCount)
+            .slice(0, 2);
+          
+          // Mark only these 2 regions for collection
+          topTwoGarbageRegions.forEach(({ region }) => {
+            const regionIndex = newRegions.findIndex(r => r.id === region.id);
+            if (regionIndex !== -1) {
+              newRegions[regionIndex] = { ...newRegions[regionIndex], shouldCollect: true };
+            }
+          });
+          
+          return newRegions;
+        });
+        
         setGcCycles((prev) => prev + 1);
-        toast.info(`G1 GC: Eden lleno (6) • Stop the world • Cycle #${gcCycles + 1}`);
+        toast.info(`G1 GC: Recolectando las 2 zonas Eden con más basura • Cycle #${gcCycles + 1}`);
         setPhase('marking');
       } else {
         simulateAllocation();
