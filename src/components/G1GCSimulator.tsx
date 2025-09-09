@@ -43,9 +43,9 @@ export const G1GCSimulator = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [gcCycles, setGcCycles] = useState(0);
   const [phase, setPhase] = useState<'allocating' | 'marking' | 'evacuating' | 'concurrent-marking' | 'mixed-gc' | 'complete'>('allocating');
-  const [gridSize, setGridSize] = useState(8); // 8x8 grid of regions
+  const [gridSize, setGridSize] = useState(4); // 4x4 grid of regions
   const [speed, setSpeed] = useState(800);
-  const [regionSize, setRegionSize] = useState(4); // 4x4 cells per region
+  const [regionSize] = useState(4); // 4x4 cells per region (16 cells)
   const [currentEdenRegions, setCurrentEdenRegions] = useState(0);
   const maxEdenRegions = 4;
 
@@ -468,16 +468,13 @@ export const G1GCSimulator = () => {
                     }}
                     title={`Region ${region.id}: ${getRegionTypeLabel(region.type)} (${region.occupancy}% occupied)`}
                   >
-                    <div className="text-xs text-center mb-1 font-semibold">
-                      {region.occupancy}%
-                    </div>
                     <div 
                       className="grid gap-0"
                       style={{ 
                         gridTemplateColumns: `repeat(${regionSize}, 1fr)`
                       }}
                     >
-                      {region.cells.slice(0, 8).map((cell, cellIndex) => ( // Show first 8 cells as preview
+                      {region.cells.map((cell, cellIndex) => ( // Show all 16 cells
                         <div
                           key={cell.id}
                           className={`
