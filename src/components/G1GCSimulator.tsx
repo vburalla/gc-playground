@@ -468,10 +468,7 @@ export const G1GCSimulator = () => {
                     }}
                     title={`Region ${region.id}: ${getRegionTypeLabel(region.type)} (${region.occupancy}% occupied)`}
                   >
-                    <div className="text-xs font-bold mb-1 text-center">
-                      {getRegionTypeLabel(region.type)}
-                    </div>
-                    <div className="text-xs text-center mb-1">
+                    <div className="text-xs text-center mb-1 font-semibold">
                       {region.occupancy}%
                     </div>
                     <div 

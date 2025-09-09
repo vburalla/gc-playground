@@ -263,32 +263,70 @@ export function AppSidebar({
           <SidebarGroupLabel>Leyenda</SidebarGroupLabel>
           <SidebarGroupContent>
             <div className="space-y-3 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-gc-free-cell border-2 border-border rounded flex-shrink-0"></div>
-                {!isCollapsed && <span className="text-sm">Free Cell</span>}
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-gc-referenced-cell border-2 border-gc-referenced-cell rounded flex-shrink-0"></div>
-                {!isCollapsed && <span className="text-sm">Referenced Cell</span>}
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-gc-dereferenced-cell border-2 border-gc-dereferenced-cell rounded flex-shrink-0"></div>
-                {!isCollapsed && <span className="text-sm">Dereferenced Cell</span>}
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-gc-marked-cell border-2 border-gc-marked-cell rounded flex-shrink-0"></div>
-                {!isCollapsed && <span className="text-sm">Marked Cell</span>}
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-gc-survived-cell border-2 border-gc-survived-cell rounded flex items-center justify-center text-xs font-bold text-gc-survived-cell-foreground flex-shrink-0">
-                  1
-                </div>
-                {!isCollapsed && <span className="text-sm">Referenced Cell (survived 1 GC)</span>}
-              </div>
+              {collectorType === 'g1' ? (
+                // G1 GC Region Legend
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-muted border-2 border-muted rounded flex-shrink-0"></div>
+                    {!isCollapsed && <span className="text-sm">Unassigned Region</span>}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-yellow-500 border-2 border-yellow-600 rounded flex-shrink-0"></div>
+                    {!isCollapsed && <span className="text-sm">Eden Region</span>}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-orange-500 border-2 border-orange-600 rounded flex-shrink-0"></div>
+                    {!isCollapsed && <span className="text-sm">Survivor From</span>}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-orange-400 border-2 border-orange-500 rounded flex-shrink-0"></div>
+                    {!isCollapsed && <span className="text-sm">Survivor To</span>}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-blue-400 border-2 border-blue-500 rounded flex-shrink-0"></div>
+                    {!isCollapsed && <span className="text-sm">Tenured Region</span>}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-red-500 border-2 border-red-600 rounded flex-shrink-0"></div>
+                    {!isCollapsed && <span className="text-sm">Humongous Region</span>}
+                  </div>
+                </>
+              ) : (
+                // Standard GC Cell Legend
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-gc-free-cell border-2 border-border rounded flex-shrink-0"></div>
+                    {!isCollapsed && <span className="text-sm">Free Cell</span>}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-gc-referenced-cell border-2 border-gc-referenced-cell rounded flex-shrink-0"></div>
+                    {!isCollapsed && <span className="text-sm">Referenced Cell</span>}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-gc-dereferenced-cell border-2 border-gc-dereferenced-cell rounded flex-shrink-0"></div>
+                    {!isCollapsed && <span className="text-sm">Dereferenced Cell</span>}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-gc-marked-cell border-2 border-gc-marked-cell rounded flex-shrink-0"></div>
+                    {!isCollapsed && <span className="text-sm">Marked Cell</span>}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-gc-survived-cell border-2 border-gc-survived-cell rounded flex items-center justify-center text-xs font-bold text-gc-survived-cell-foreground flex-shrink-0">
+                      1
+                    </div>
+                    {!isCollapsed && <span className="text-sm">Referenced Cell (survived 1 GC)</span>}
+                  </div>
+                </>
+              )}
             </div>
           </SidebarGroupContent>
         </SidebarGroup>
