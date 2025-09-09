@@ -225,22 +225,32 @@ export const G1GCSimulator = () => {
         }
       }
 
-      // Also simulate memory deallocation in Survivor regions (30-40% probability)
+      // Also simulate memory deallocation in Survivor regions (30-40% of occupied cells)
       newRegions.forEach((region) => {
         if (region.type === RegionType.SURVIVOR) {
-          region.cells = region.cells.map((cell) => {
-            if (cell.state === CellState.SURVIVED || cell.state === CellState.REFERENCED) {
-              // 30-40% chance of becoming garbage in Survivor
-              const deathRate = 0.3 + Math.random() * 0.1; // 30-40%
-              return Math.random() < deathRate 
-                ? { ...cell, state: CellState.DEREFERENCED }
-                : cell;
-            }
-            return cell;
-          });
+          const occupiedCells = region.cells.filter(c => 
+            c.state === CellState.SURVIVED || c.state === CellState.REFERENCED
+          );
           
-          // Update occupancy after deallocation
-          region.occupancy = calculateOccupancy(region.cells);
+          if (occupiedCells.length > 0) {
+            // Calculate 30-40% of occupied cells to deallocate
+            const deathRate = 0.3 + Math.random() * 0.1; // 30-40%
+            const cellsToDealloc = Math.floor(occupiedCells.length * deathRate);
+            
+            // Randomly select cells to deallocate
+            const shuffled = [...occupiedCells].sort(() => Math.random() - 0.5);
+            const toDealloc = shuffled.slice(0, cellsToDealloc);
+            
+            region.cells = region.cells.map((cell) => {
+              if (toDealloc.some(deallocCell => deallocCell.id === cell.id)) {
+                return { ...cell, state: CellState.DEREFERENCED };
+              }
+              return cell;
+            });
+            
+            // Update occupancy after deallocation
+            region.occupancy = calculateOccupancy(region.cells);
+          }
         }
       });
 
@@ -639,7 +649,7 @@ export const G1GCSimulator = () => {
         baseColor = "bg-yellow-500 text-yellow-50 border-yellow-600";
         break;
       case RegionType.SURVIVOR:
-        baseColor = "bg-orange-500 text-orange-50 border-orange-600";
+        baseColor = "bg-purple-600 text-purple-50 border-purple-700";
         break;
       case RegionType.SURVIVOR_FROM:
         baseColor = "bg-orange-500 text-orange-50 border-orange-600";
