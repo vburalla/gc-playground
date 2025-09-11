@@ -175,7 +175,7 @@ export const PCRegisterSimulator = () => {
     isFlipped: boolean;
     onFlip: () => void;
   }) => (
-    <div className="w-full h-[700px] relative" style={{ perspective: '1200px' }}>
+    <div className="w-full h-[700px] relative overflow-hidden" style={{ perspective: '1200px' }}>
       <div className={`w-full h-full relative transition-transform duration-700 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
         {/* Front side - Java Code */}
         <Card className="absolute inset-0 [backface-visibility:hidden] flex flex-col h-full">
@@ -224,7 +224,7 @@ export const PCRegisterSimulator = () => {
           <p className="text-muted-foreground">Observe the step-by-step execution through two Java classes</p>
         </div>
 
-        <div className="w-full grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] items-start gap-10">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] items-start gap-10">
           {/* Left: two code cards */}
           <div className="flex-1 min-w-0 grid gap-5 grid-cols-1 lg:grid-cols-2">
             <div className="min-w-0">
