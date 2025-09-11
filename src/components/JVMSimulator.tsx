@@ -244,7 +244,7 @@ export const JVMSimulator = () => {
           <p className="text-muted-foreground">Interactive Stack, Heap and Method Area Visualization</p>
         </div>
 
-        <div className="grid gap-6 h-[calc(100vh-200px)]" style={{ gridTemplateColumns: "40% 15% 20% 25%" }}>
+        <div className="grid gap-6 h-[calc(100vh-200px)]" style={{ gridTemplateColumns: "42% 16.5% 21.5% 20%" }}>
           {/* Java Code */}
           <Card className="flex flex-col">
             <CardHeader>
