@@ -224,9 +224,9 @@ export const PCRegisterSimulator = () => {
           <p className="text-muted-foreground">Observe the step-by-step execution through two Java classes</p>
         </div>
 
-        <div className="w-full mx-auto max-w-[1600px] grid gap-10 grid-cols-1 xl:grid-cols-[2fr_400px]">
+        <div className="w-full grid gap-10 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
           {/* Left: two code cards */}
-          <div className="grid gap-5 grid-cols-1 xl:grid-cols-2 min-w-0">
+          <div className="grid gap-5 grid-cols-1 lg:grid-cols-2 min-w-0">
             <div className="min-w-0">
               <FlipCard
                 title="Main.java"
