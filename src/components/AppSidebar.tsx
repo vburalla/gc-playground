@@ -277,7 +277,7 @@ export function AppSidebar({
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-purple-600 border-2 border-purple-700 rounded flex-shrink-0"></div>
+                    <div className="w-6 h-6 bg-green-600 border-2 border-green-700 rounded flex-shrink-0"></div>
                     {!isCollapsed && <span className="text-sm">Survivor Region</span>}
                   </div>
                   

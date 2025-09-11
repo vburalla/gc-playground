@@ -666,13 +666,13 @@ export const G1GCSimulator = () => {
         baseColor = "bg-yellow-500 text-yellow-50 border-yellow-600";
         break;
       case RegionType.SURVIVOR:
-        baseColor = "bg-secondary text-secondary-foreground border-secondary";
+        baseColor = "bg-green-600 text-green-50 border-green-700";
         break;
       case RegionType.SURVIVOR_FROM:
-        baseColor = "bg-accent text-accent-foreground border-accent";
+        baseColor = "bg-green-500 text-green-50 border-green-600";
         break;
       case RegionType.SURVIVOR_TO:
-        baseColor = "bg-muted text-muted-foreground border-muted";
+        baseColor = "bg-green-400 text-green-50 border-green-500";
         break;
       case RegionType.TENURED:
         baseColor = "bg-blue-400 text-blue-50 border-blue-500";
