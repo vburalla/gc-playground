@@ -226,7 +226,7 @@ export const PCRegisterSimulator = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-bg">
+    <div className="min-h-screen w-screen overflow-x-hidden bg-gradient-bg">
       <header className="w-full text-center py-8 bg-secondary">
         <h1 className="text-4xl font-bold text-foreground mb-2">Java PC Register Simulator</h1>
         <p className="text-xl text-muted-foreground">Observe the step-by-step execution through two Java classes</p>
