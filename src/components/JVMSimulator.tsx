@@ -244,15 +244,45 @@ export const JVMSimulator = () => {
           <p className="text-muted-foreground">Interactive Stack, Heap and Method Area Visualization</p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
+        <div className="grid gap-6 h-[calc(100vh-200px)]" style={{ gridTemplateColumns: "40% 15% 20% 25%" }}>
           {/* Java Code */}
-          <Card className="lg:col-span-2 flex flex-col">
+          <Card className="flex flex-col">
             <CardHeader>
               <CardTitle className="text-primary">Java Code</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto">
               <div className="bg-muted/30 p-4 rounded-lg font-mono text-sm overflow-auto">
                 {formatCode()}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Heap */}
+          <Card className="flex flex-col">
+            <CardHeader>
+              <CardTitle className="text-primary">Heap</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-auto">
+              <div className="space-y-2">
+                {heapObjects.map((obj) => (
+                  <div 
+                    key={obj.id}
+                    className={`border-2 rounded-lg p-3 transition-all duration-500 ${
+                      obj.isGarbage 
+                        ? 'border-destructive/50 bg-destructive/10 opacity-60' 
+                        : 'border-success/50 bg-success/10'
+                    }`}
+                  >
+                    <div className="text-sm font-mono">
+                      <span className="text-warning font-bold">{obj.ref}</span>: {obj.content}
+                    </div>
+                  </div>
+                ))}
+                {isFinished && (
+                  <div className="text-destructive font-bold text-center mt-4">
+                    🗑️ Objects unreferenced, eligible for Garbage Collector
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -310,36 +340,6 @@ export const JVMSimulator = () => {
                     </ul>
                   </div>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Heap - spans both right columns */}
-          <Card className="lg:col-span-2 flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-primary">Heap</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-auto">
-              <div className="space-y-2">
-                {heapObjects.map((obj) => (
-                  <div 
-                    key={obj.id}
-                    className={`border-2 rounded-lg p-3 transition-all duration-500 ${
-                      obj.isGarbage 
-                        ? 'border-destructive/50 bg-destructive/10 opacity-60' 
-                        : 'border-success/50 bg-success/10'
-                    }`}
-                  >
-                    <div className="text-sm font-mono">
-                      <span className="text-warning font-bold">{obj.ref}</span>: {obj.content}
-                    </div>
-                  </div>
-                ))}
-                {isFinished && (
-                  <div className="text-destructive font-bold text-center mt-4">
-                    🗑️ Objects unreferenced, eligible for Garbage Collector
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
