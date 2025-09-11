@@ -176,21 +176,15 @@ export const PCRegisterSimulator = () => {
     onFlip: () => void;
   }) => (
     <div className="w-full h-[700px] relative overflow-hidden" style={{ perspective: '1200px' }}>
-      <div
-        className="w-full h-full relative transition-transform duration-700"
-        style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'none' }}
-      >
+      <div className={`w-full h-full relative transition-transform duration-700 transform-style-preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
         {/* Front side - Java Code */}
-        <Card
-          className="absolute inset-0 flex flex-col h-full card-shadow bg-card border-border"
-          style={{ backfaceVisibility: 'hidden', transform: 'rotateY(0deg)' }}
-        >
+        <Card className="absolute inset-0 flex flex-col h-full card-shadow bg-card border-border backface-hidden">
           <CardHeader>
             <CardTitle className="text-primary text-lg">Class: {title}</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-auto pb-16">
             <pre className="bg-secondary p-5 rounded-lg h-full overflow-auto font-mono text-sm border border-border">
-              <code className="text-foreground">{javaCode}</code>
+              <code className="text-foreground whitespace-pre-wrap break-words">{javaCode}</code>
             </pre>
           </CardContent>
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
@@ -201,16 +195,13 @@ export const PCRegisterSimulator = () => {
         </Card>
         
         {/* Back side - Bytecode */}
-        <Card
-          className="absolute inset-0 flex flex-col h-full card-shadow bg-card border-border"
-          style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-        >
+        <Card className="absolute inset-0 flex flex-col h-full card-shadow bg-card border-border backface-hidden rotate-y-180">
           <CardHeader>
             <CardTitle className="text-primary text-lg">Bytecode: {title.replace('.java', '.class')}</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-auto pb-16">
-            <pre className="bg-secondary p-5 rounded-lg h-full overflow-auto font-mono text-sm border border-border">
-              <code>
+            <pre className="bg-secondary p-5 rounded-lg h-full overflow-y-auto overflow-x-hidden font-mono text-sm border border-border">
+              <code className="block whitespace-pre-wrap break-all p-5">
                 {formatCode(bytecode, className, true)}
               </code>
             </pre>
