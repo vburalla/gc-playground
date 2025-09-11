@@ -27,7 +27,8 @@ const App = () => (
           <SidebarProvider>
             <div className="flex flex-1">
               <Routes>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<PCRegister />} />
+                <Route path="/non-moving" element={<Index />} />
                 <Route path="/compacting" element={<CompactingGC />} />
                 <Route path="/copy" element={<CopyGC />} />
                 <Route path="/generational" element={<GenerationalGC />} />
