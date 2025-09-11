@@ -178,7 +178,7 @@ export const PCRegisterSimulator = () => {
     <div className="w-full h-[700px] relative" style={{ perspective: '1200px' }}>
       <div className={`w-full h-full relative transition-transform duration-800 transform-style-preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
         {/* Front side - Java Code */}
-        <Card className="absolute inset-0 backface-hidden">
+        <Card className="absolute inset-0 backface-hidden flex flex-col h-full">
           <CardHeader>
             <CardTitle className="text-primary">Class: {title}</CardTitle>
           </CardHeader>
@@ -195,7 +195,7 @@ export const PCRegisterSimulator = () => {
         </Card>
         
         {/* Back side - Bytecode */}
-        <Card className="absolute inset-0 backface-hidden rotate-y-180">
+        <Card className="absolute inset-0 backface-hidden rotate-y-180 flex flex-col h-full">
           <CardHeader>
             <CardTitle className="text-primary">Bytecode: {title.replace('.java', '.class')}</CardTitle>
           </CardHeader>
@@ -224,9 +224,9 @@ export const PCRegisterSimulator = () => {
           <p className="text-muted-foreground">Observe the step-by-step execution through two Java classes</p>
         </div>
 
-        <div className="w-full grid gap-10 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="w-full max-w-[1600px] mx-auto flex flex-col lg:flex-row gap-10">
           {/* Left: two code cards */}
-          <div className="grid gap-5 grid-cols-1 lg:grid-cols-2 min-w-0">
+          <div className="flex-1 min-w-0 grid gap-5 grid-cols-1 lg:grid-cols-2">
             <div className="min-w-0">
               <FlipCard
                 title="Main.java"
@@ -251,7 +251,7 @@ export const PCRegisterSimulator = () => {
           </div>
 
           {/* Right: PC Register panel */}
-          <div className="w-full xl:w-[400px] xl:flex-shrink-0">
+          <div className="w-full lg:w-[400px] lg:flex-shrink-0">
             <Card className="h-[700px] flex flex-col">
               <CardHeader>
                 <CardTitle className="text-primary text-center">PC Register Simulation</CardTitle>
