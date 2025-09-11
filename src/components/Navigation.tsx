@@ -8,11 +8,25 @@ export const Navigation = () => {
         <div className="flex items-center justify-between">
           <div className="flex-1 text-center">
             <h1 className="text-2xl font-bold text-foreground bg-gradient-to-r from-primary to-ring bg-clip-text text-transparent">
-              Garbage Collector Simulator
+              Java Virtual Machine Explorer
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Interactive Memory Management Demo</p>
+            <p className="text-sm text-muted-foreground mt-1">Garbage Collection & JVM Memory Simulation</p>
           </div>
-          <nav className="flex gap-3">
+          <nav className="flex gap-2 flex-wrap">
+            <div className="flex gap-2">
+              <Button asChild size="sm">
+                <NavLink 
+                  to="/jvm-simulator" 
+                  className={({ isActive }) => 
+                    `transition-all ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`
+                  }
+                >
+                  JVM Simulator
+                </NavLink>
+              </Button>
+            </div>
+            <div className="h-6 w-px bg-border"></div>
+            <div className="flex gap-2">
             <Button asChild size="sm">
               <NavLink 
                 to="/" 
@@ -62,7 +76,8 @@ export const Navigation = () => {
               >
                 G1 GC
               </NavLink>
-            </Button>
+              </Button>
+            </div>
           </nav>
         </div>
       </div>
