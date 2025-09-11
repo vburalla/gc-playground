@@ -237,14 +237,14 @@ export const JVMSimulator = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-bg w-screen">
-      <main className="w-screen p-6">
+    <div className="min-h-screen bg-gradient-bg">
+      <main className="w-full p-6">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-foreground mb-2">JVM Simulator</h1>
           <p className="text-muted-foreground">Interactive Stack, Heap and Method Area Visualization</p>
         </div>
 
-        <div className="grid w-full gap-6 h-[calc(100vh-200px)]" style={{ gridTemplateColumns: "42% 16.5% 21.5% 20%" }}>
+        <div className="grid w-full gap-6 h-[calc(100vh-200px)]" style={{ gridTemplateColumns: "2.1fr 0.8fr 1.1fr 1fr" }}>
           {/* Java Code */}
           <Card className="flex flex-col">
             <CardHeader>
