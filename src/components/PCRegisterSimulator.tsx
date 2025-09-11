@@ -232,8 +232,8 @@ export const PCRegisterSimulator = () => {
         <p className="text-xl text-muted-foreground">Observe the step-by-step execution through two Java classes</p>
       </header>
       
-      <main className="w-full p-10 flex justify-center">
-        <div className="w-full max-w-[1600px] grid grid-cols-1 xl:grid-cols-[2fr_400px] items-start gap-10">
+      <main className="w-full p-10">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] items-start gap-10">
           {/* Left: two code cards */}
           <div className="grid gap-5 grid-cols-1 lg:grid-cols-2">
             <div className="min-w-0">
