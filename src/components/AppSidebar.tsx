@@ -55,15 +55,15 @@ export function AppSidebar({
       <SidebarContent>
         {/* Configuración */}
         <SidebarGroup>
-          <SidebarGroupLabel>Configuración</SidebarGroupLabel>
+          <SidebarGroupLabel>Configuration</SidebarGroupLabel>
           <SidebarGroupContent>
             <div className="space-y-4 p-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">
                   {!isCollapsed && (
-                    collectorType === 'generational' ? "Tamaño Eden Space" : 
-                    collectorType === 'g1' ? "Grid de Regiones" : 
-                    "Tamaño de Memoria"
+                    collectorType === 'generational' ? "Eden Space Size" : 
+                    collectorType === 'g1' ? "Region Grid" : 
+                    "Memory Size"
                   )}
                 </label>
                 <select 
@@ -72,28 +72,28 @@ export function AppSidebar({
                   disabled={isRunning}
                   className="w-full p-2 rounded border bg-background text-foreground text-sm"
                   title={
-                    collectorType === 'generational' ? "Tamaño Eden Space" : 
-                    collectorType === 'g1' ? "Grid de Regiones" : 
-                    "Tamaño de Memoria"
+                    collectorType === 'generational' ? "Eden Space Size" : 
+                    collectorType === 'g1' ? "Region Grid" : 
+                    "Memory Size"
                   }
                 >
                   {collectorType === 'generational' ? (
                     <>
-                      <option value={4}>13x10 (Eden: 4 celdas)</option>
-                      <option value={6}>19x15 (Eden: 6 celdas)</option>
-                      <option value={8}>26x20 (Eden: 8 celdas)</option>
+                      <option value={4}>13x10 (Eden: 4 cells)</option>
+                      <option value={6}>19x15 (Eden: 6 cells)</option>
+                      <option value={8}>26x20 (Eden: 8 cells)</option>
                     </>
                   ) : collectorType === 'g1' ? (
                     <>
-                      <option value={5}>5x5 (25 regiones)</option>
-                      <option value={6}>6x6 (36 regiones)</option>
-                      <option value={7}>7x7 (49 regiones)</option>
+                      <option value={5}>5x5 (25 regions)</option>
+                      <option value={6}>6x6 (36 regions)</option>
+                      <option value={7}>7x7 (49 regions)</option>
                     </>
                   ) : (
                     <>
-                      <option value={10}>10x10 (100 celdas)</option>
-                      <option value={15}>15x15 (225 celdas)</option>
-                      <option value={20}>20x20 (400 celdas)</option>
+                      <option value={10}>10x10 (100 cells)</option>
+                      <option value={15}>15x15 (225 cells)</option>
+                      <option value={20}>20x20 (400 cells)</option>
                     </>
                   )}
                 </select>
@@ -101,19 +101,19 @@ export function AppSidebar({
 
               <div>
                 <label className="text-sm font-medium mb-2 block">
-                  {!isCollapsed && "Velocidad"}
+                  {!isCollapsed && "Speed"}
                 </label>
                 <select 
                   value={speed} 
                   onChange={(e) => setSpeed(Number(e.target.value))}
                   className="w-full p-2 rounded border bg-background text-foreground text-sm"
-                  title="Velocidad"
+                  title="Speed"
                 >
-                  <option value={200}>Muy Rápida</option>
-                  <option value={400}>Rápida</option>
+                  <option value={200}>Very Fast</option>
+                  <option value={400}>Fast</option>
                   <option value={600}>Normal</option>
-                  <option value={800}>Lenta</option>
-                  <option value={1200}>Muy Lenta</option>
+                  <option value={800}>Slow</option>
+                  <option value={1200}>Very Slow</option>
                 </select>
               </div>
 
@@ -121,19 +121,19 @@ export function AppSidebar({
               {collectorType === 'generational' && setTenureThreshold && tenureThreshold !== undefined && (
                 <div>
                   <label className="text-sm font-medium mb-2 block">
-                    {!isCollapsed && "Umbral Tenured"}
+                    {!isCollapsed && "Tenured Threshold"}
                   </label>
                   <select 
                     value={tenureThreshold} 
                     onChange={(e) => setTenureThreshold(Number(e.target.value))}
                     disabled={isRunning}
                     className="w-full p-2 rounded border bg-background text-foreground text-sm"
-                    title="Ciclos para mover a Tenured"
+                    title="Cycles to move to Tenured"
                   >
-                    <option value={2}>2 ciclos</option>
-                    <option value={3}>3 ciclos</option>
-                    <option value={4}>4 ciclos</option>
-                    <option value={5}>5 ciclos</option>
+                    <option value={2}>2 cycles</option>
+                    <option value={3}>3 cycles</option>
+                    <option value={4}>4 cycles</option>
+                    <option value={5}>5 cycles</option>
                   </select>
                 </div>
               )}
@@ -143,21 +143,21 @@ export function AppSidebar({
 
         {/* Controles */}
         <SidebarGroup>
-          <SidebarGroupLabel>Controles</SidebarGroupLabel>
+          <SidebarGroupLabel>Controls</SidebarGroupLabel>
           <SidebarGroupContent>
             <div className="space-y-3 p-4">
               {!isCollapsed && (
                 <div className="space-y-2 pb-3 border-b">
-                  <p className="text-sm text-muted-foreground">Paso: {currentStep}</p>
-                  <p className="text-sm text-muted-foreground">Ciclos GC: {gcCycles}</p>
-                  <p className="text-sm text-muted-foreground">Fase: {phase}</p>
+                  <p className="text-sm text-muted-foreground">Step: {currentStep}</p>
+                  <p className="text-sm text-muted-foreground">GC Cycles: {gcCycles}</p>
+                  <p className="text-sm text-muted-foreground">Phase: {phase}</p>
                   <p className="text-sm text-muted-foreground">
                     {collectorType === 'generational' ? `Eden ${gridSize}` : 
                      collectorType === 'g1' ? `Grid ${gridSize}x${gridSize}` : 
                      `${gridSize}x${gridSize}`}
                   </p>
                   {collectorType === 'copy' && activeSpace && (
-                    <p className="text-sm text-muted-foreground">Activo: {activeSpace === 'from' ? 'From' : 'To'} Space</p>
+                    <p className="text-sm text-muted-foreground">Active: {activeSpace === 'from' ? 'From' : 'To'} Space</p>
                   )}
                 </div>
               )}
@@ -167,12 +167,12 @@ export function AppSidebar({
                 className="w-full"
                 variant={isRunning ? "secondary" : "default"}
                 size={isCollapsed ? "icon" : "default"}
-                title={phase === 'complete' ? 'Reiniciar' : isRunning ? 'Pausar' : 'Iniciar'}
+                title={phase === 'complete' ? 'Restart' : isRunning ? 'Pause' : 'Start'}
               >
                 {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 {!isCollapsed && (
                   <span className="ml-2">
-                    {phase === 'complete' ? 'Reiniciar' : isRunning ? 'Pausar' : 'Iniciar'}
+                    {phase === 'complete' ? 'Restart' : isRunning ? 'Pause' : 'Start'}
                   </span>
                 )}
               </Button>
@@ -183,10 +183,10 @@ export function AppSidebar({
                 className="w-full"
                 variant="outline"
                 size={isCollapsed ? "icon" : "default"}
-                title="Siguiente Paso"
+                title="Next Step"
               >
                 <SkipForward className="w-4 h-4" />
-                {!isCollapsed && <span className="ml-2">Siguiente Paso</span>}
+                {!isCollapsed && <span className="ml-2">Next Step</span>}
               </Button>
               
               <Button 
@@ -194,10 +194,10 @@ export function AppSidebar({
                 className="w-full"
                 variant="outline"
                 size={isCollapsed ? "icon" : "default"}
-                title="Reiniciar"
+                title="Restart"
               >
                 <RotateCcw className="w-4 h-4" />
-                {!isCollapsed && <span className="ml-2">Reiniciar</span>}
+                {!isCollapsed && <span className="ml-2">Restart</span>}
               </Button>
             </div>
           </SidebarGroupContent>
@@ -206,7 +206,7 @@ export function AppSidebar({
         {/* Proceso */}
         {!isCollapsed && (
           <SidebarGroup>
-            <SidebarGroupLabel>Proceso</SidebarGroupLabel>
+            <SidebarGroupLabel>Process</SidebarGroupLabel>
             <SidebarGroupContent>
               <div className="p-4">
                 <ol className="text-sm space-y-1 text-muted-foreground">
@@ -260,7 +260,7 @@ export function AppSidebar({
 
         {/* Leyenda */}
         <SidebarGroup>
-          <SidebarGroupLabel>Leyenda</SidebarGroupLabel>
+          <SidebarGroupLabel>Legend</SidebarGroupLabel>
           <SidebarGroupContent>
             <div className="space-y-3 p-4">
               {collectorType === 'g1' ? (

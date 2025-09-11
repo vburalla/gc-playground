@@ -28,17 +28,17 @@ export const JVMSimulator = () => {
     `    public static void main(String[] args) {`,
     `        String details = buildAndFormatPerson(23, "John");`,
     `        System.out.println(details);`,
-    `    } // Fin de main()`,
+    `    } // End of main()`,
     ``,
     `    public static String buildAndFormatPerson(int id, String name) {`,
     `        Person person = new Person(id, name);`,
     `        return formatDetails(person);`,
-    `    } // Fin de buildAndFormatPerson()`,
+    `    } // End of buildAndFormatPerson()`,
     ``,
     `    public static String formatDetails(Person p) {`,
     `        String info = "ID: " + p.id + ", Name: " + p.name;`,
     `        return info;`,
-    `    } // Fin de formatDetails()`,
+    `    } // End of formatDetails()`,
     `}`,
     ``,
     `class Person {`,
@@ -48,7 +48,7 @@ export const JVMSimulator = () => {
     `    Person(int id, String name) {`,
     `        this.id = id;`,
     `        this.name = name;`,
-    `    } // Fin del constructor`,
+    `    } // End of constructor`,
     `}`
   ];
 
@@ -241,14 +241,14 @@ export const JVMSimulator = () => {
       <main className="container mx-auto p-6">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-foreground mb-2">JVM Simulator</h1>
-          <p className="text-muted-foreground">Visualización interactiva del Stack, Heap y Method Area</p>
+          <p className="text-muted-foreground">Interactive Stack, Heap and Method Area Visualization</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-200px)]">
-          {/* Código Java */}
-          <Card className="lg:col-span-5 flex flex-col">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+          {/* Java Code */}
+          <Card className="lg:col-span-2 flex flex-col">
             <CardHeader>
-              <CardTitle className="text-primary">Código Java</CardTitle>
+              <CardTitle className="text-primary">Java Code</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto">
               <div className="bg-muted/30 p-4 rounded-lg font-mono text-sm overflow-auto">
@@ -257,95 +257,97 @@ export const JVMSimulator = () => {
             </CardContent>
           </Card>
 
-          {/* Stack */}
-          <Card className="lg:col-span-3 flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-primary">Stack</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-auto">
-              <div className="space-y-2 flex flex-col-reverse">
-                {frames.map((frame) => (
-                  <div 
-                    key={frame.id}
-                    className="border-2 border-primary/50 rounded-lg p-3 bg-primary/10 transition-all duration-500"
-                  >
-                    <div className="font-bold text-primary text-sm mb-1">
-                      Frame: {frame.name}
-                    </div>
-                    {frame.returnAddr && (
-                      <div className="text-xs text-muted-foreground mb-1">
-                        Return Address: line {frame.returnAddr}
+          {/* Right Panel - Stack, Heap, Method Area */}
+          <Card className="lg:col-span-1 flex flex-col">
+            <div className="grid grid-rows-3 gap-4 h-full">
+              {/* Stack */}
+              <div className="flex flex-col">
+                <div className="border-b border-border/50 pb-2 mb-3">
+                  <h3 className="text-primary font-semibold text-sm">Stack</h3>
+                </div>
+                <div className="flex-1 overflow-auto">
+                  <div className="space-y-2 flex flex-col-reverse">
+                    {frames.map((frame) => (
+                      <div 
+                        key={frame.id}
+                        className="border-2 border-primary/50 rounded-lg p-2 bg-primary/10 transition-all duration-500"
+                      >
+                        <div className="font-bold text-primary text-xs mb-1">
+                          Frame: {frame.name}
+                        </div>
+                        {frame.returnAddr && (
+                          <div className="text-xs text-muted-foreground mb-1">
+                            Return Address: line {frame.returnAddr}
+                          </div>
+                        )}
+                        <div className="text-xs space-y-1">
+                          {frame.variables.map((variable, index) => (
+                            <div key={index} dangerouslySetInnerHTML={{ __html: variable }} />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Heap */}
+              <div className="flex flex-col">
+                <div className="border-b border-border/50 pb-2 mb-3">
+                  <h3 className="text-primary font-semibold text-sm">Heap</h3>
+                </div>
+                <div className="flex-1 overflow-auto">
+                  <div className="space-y-2">
+                    {heapObjects.map((obj) => (
+                      <div 
+                        key={obj.id}
+                        className={`border-2 rounded-lg p-2 transition-all duration-500 ${
+                          obj.isGarbage 
+                            ? 'border-destructive/50 bg-destructive/10 opacity-60' 
+                            : 'border-success/50 bg-success/10'
+                        }`}
+                      >
+                        <div className="text-xs font-mono">
+                          <span className="text-warning font-bold">{obj.ref}</span>: {obj.content}
+                        </div>
+                      </div>
+                    ))}
+                    {isFinished && (
+                      <div className="text-destructive font-bold text-center mt-2 text-xs">
+                        🗑️ Objects unreferenced, eligible for Garbage Collector
                       </div>
                     )}
-                    <div className="text-sm space-y-1">
-                      {frame.variables.map((variable, index) => (
-                        <div key={index} dangerouslySetInnerHTML={{ __html: variable }} />
-                      ))}
-                    </div>
                   </div>
-                ))}
+                </div>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Heap */}
-          <Card className="lg:col-span-4 flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-primary">Heap</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-auto">
-              <div className="space-y-2">
-                {heapObjects.map((obj) => (
-                  <div 
-                    key={obj.id}
-                    className={`border-2 rounded-lg p-3 transition-all duration-500 ${
-                      obj.isGarbage 
-                        ? 'border-destructive/50 bg-destructive/10 opacity-60' 
-                        : 'border-success/50 bg-success/10'
-                    }`}
-                  >
-                    <div className="text-sm font-mono">
-                      <span className="text-warning font-bold">{obj.ref}</span>: {obj.content}
-                    </div>
+              {/* Method Area */}
+              <div className="flex flex-col">
+                <div className="border-b border-border/50 pb-2 mb-3">
+                  <h3 className="text-primary font-semibold text-sm">Method Area</h3>
+                </div>
+                <div className="flex-1 overflow-auto">
+                  <div className="space-y-3">
+                    {methodAreaInfo.map((classInfo, index) => (
+                      <div 
+                        key={index}
+                        className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-3"
+                      >
+                        <h4 className="font-bold text-foreground border-b border-muted-foreground/30 pb-1 mb-2 text-xs">
+                          Class: {classInfo.className}
+                        </h4>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {classInfo.methods.map((method, methodIndex) => (
+                            <li key={methodIndex}>• {method}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                {isFinished && (
-                  <div className="text-destructive font-bold text-center mt-4">
-                    🗑️ Objetos sin referencia, elegibles para Garbage Collector
-                  </div>
-                )}
+                </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
-
-          {/* Method Area */}
-          <Card className="lg:col-span-6 flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-primary">Method Area</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-auto">
-              <div className="space-y-4">
-                {methodAreaInfo.map((classInfo, index) => (
-                  <div 
-                    key={index}
-                    className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4"
-                  >
-                    <h4 className="font-bold text-foreground border-b border-muted-foreground/30 pb-2 mb-2">
-                      Class: {classInfo.className}
-                    </h4>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      {classInfo.methods.map((method, methodIndex) => (
-                        <li key={methodIndex}>• {method}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Controls placeholder for responsive */}
-          <div className="lg:col-span-6"></div>
         </div>
 
         {/* Control Button */}
@@ -355,7 +357,7 @@ export const JVMSimulator = () => {
             size="lg"
             className="shadow-lg"
           >
-            {isFinished ? '🔄 Reiniciar Animación' : '▶ Siguiente paso'}
+            {isFinished ? '🔄 Restart Animation' : '▶ Next Step'}
           </Button>
         </div>
       </main>
