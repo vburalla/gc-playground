@@ -10,6 +10,7 @@ import CopyGC from "./pages/CopyGC";
 import GenerationalGC from "./pages/GenerationalGC";
 import G1GC from "./pages/G1GC";
 import JVMSimulatorPage from "./pages/JVMSimulator";
+import PCRegister from "./pages/PCRegister";
 import NotFound from "./pages/NotFound";
 import { Navigation } from "./components/Navigation";
 
@@ -32,6 +33,7 @@ const App = () => (
                 <Route path="/generational" element={<GenerationalGC />} />
                 <Route path="/g1" element={<G1GC />} />
                 <Route path="/jvm-simulator" element={<JVMSimulatorPage />} />
+                <Route path="/pc-register" element={<PCRegister />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
