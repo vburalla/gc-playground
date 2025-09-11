@@ -233,9 +233,9 @@ export const PCRegisterSimulator = () => {
       </header>
       
       <main className="w-full p-6">
-        <div className="w-full max-w-none grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-8">
+        <div className="w-full flex flex-col lg:flex-row items-stretch gap-8">
           {/* Left: two code cards */}
-          <div className="grid gap-5 grid-cols-1 lg:grid-cols-2">
+          <div className="flex-1 min-w-0 grid gap-5 grid-cols-1 lg:grid-cols-2">
             <div className="min-w-0">
               <FlipCard
                 title="Main.java"
@@ -260,7 +260,7 @@ export const PCRegisterSimulator = () => {
           </div>
 
           {/* Right: PC Register panel */}
-          <div className="w-full">
+          <div className="w-full lg:w-[420px] lg:flex-shrink-0">
             <Card className="h-[700px] flex flex-col card-shadow bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-primary text-center text-xl">PC Register Simulation</CardTitle>
