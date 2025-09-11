@@ -8,82 +8,74 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* GC Simulator Dark Theme */
-    --background: 220 25% 8%;
-    --foreground: 210 40% 95%;
-
-    --card: 220 20% 12%;
-    --card-foreground: 210 40% 95%;
-
-    --popover: 220 20% 12%;
-    --popover-foreground: 210 40% 95%;
-
-    --primary: 217 91% 60%;
-    --primary-foreground: 220 25% 8%;
-
-    --secondary: 220 15% 20%;
-    --secondary-foreground: 210 40% 95%;
-
-    --muted: 220 15% 18%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 220 15% 20%;
-    --accent-foreground: 210 40% 95%;
-
-    --destructive: 0 62% 50%;
+    /* Dark technical theme colors - based on the original HTML design */
+    --bg-color: 0 0% 10.2%;          /* #1a1a1a */
+    --main-bg-color: 0 0% 17.3%;     /* #2c2c2c */
+    --text-color: 0 0% 87.8%;        /* #e0e0e0 */
+    --accent-color: 122 39% 49%;     /* #4CAF50 */
+    --code-bg-color: 0 0% 12.2%;     /* #1f1f1f */
+    --card-shadow: 0 8px 16px rgba(0, 0, 0, 0.7);
+    
+    /* Design system mappings */
+    --background: var(--bg-color);
+    --foreground: var(--text-color);
+    --card: var(--main-bg-color);
+    --card-foreground: var(--text-color);
+    --popover: var(--main-bg-color);
+    --popover-foreground: var(--text-color);
+    --primary: var(--accent-color);
+    --primary-foreground: 0 0% 100%;
+    --secondary: var(--code-bg-color);
+    --secondary-foreground: var(--text-color);
+    --muted: var(--code-bg-color);
+    --muted-foreground: 0 0% 60%;
+    --accent: var(--accent-color);
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    
-    --success: 120 60% 50%;
-    --success-foreground: 210 40% 98%;
-    
-    --warning: 45 93% 58%;
-    --warning-foreground: 220 25% 8%;
-
-    --border: 220 15% 20%;
-    --input: 220 15% 18%;
-    --ring: 217 91% 60%;
-
+    --border: 0 0% 25%;
+    --input: var(--code-bg-color);
+    --ring: var(--accent-color);
+    --success: var(--accent-color);
+    --warning: 45 93% 47%;
     --radius: 0.5rem;
-
-    /* GC Simulator Colors - Blue progression system */
-    --gc-free-cell: 0 0% 95%;
-    --gc-free-cell-foreground: 220 25% 8%;
     
-    /* Blue color progression for allocated cells */
-    --gc-blue-fresh: 217 91% 60%;        /* Bright blue for new allocations */
-    --gc-blue-aging-1: 217 80% 55%;      /* Slightly muted */
-    --gc-blue-aging-2: 217 70% 50%;      /* More muted */
-    --gc-blue-aging-3: 217 60% 45%;      /* Getting gray-ish */
-    --gc-blue-old: 217 40% 40%;          /* Almost gray */
-    --gc-blue-foreground: 0 0% 100%;
-    
-    /* Legacy colors for compatibility */
-    --gc-referenced-cell: 217 91% 60%;
-    --gc-referenced-cell-foreground: 0 0% 100%;
-    --gc-dereferenced-cell: 271 76% 53%;
-    --gc-dereferenced-cell-foreground: 0 0% 100%;
-    --gc-marked-cell: 120 60% 70%;
-    --gc-marked-cell-foreground: 120 60% 20%;
-    --gc-survived-cell: 217 91% 60%;
-    --gc-survived-cell-foreground: 0 0% 100%;
-
     /* Gradients */
-    --gradient-bg: linear-gradient(135deg, hsl(220 25% 8%) 0%, hsl(220 30% 12%) 100%);
+    --gradient-bg: linear-gradient(135deg, hsl(var(--bg-color)), hsl(var(--main-bg-color)));
 
-    --sidebar-background: 220 20% 12%;
-    --sidebar-foreground: 210 40% 95%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 220 25% 8%;
-    --sidebar-accent: 220 15% 20%;
-    --sidebar-accent-foreground: 210 40% 95%;
-    --sidebar-border: 220 15% 20%;
-    --sidebar-ring: 217 91% 60%;
+    /* Sidebar */
+    --sidebar-background: var(--main-bg-color);
+    --sidebar-foreground: var(--text-color);
+    --sidebar-primary: var(--accent-color);
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: var(--code-bg-color);
+    --sidebar-accent-foreground: var(--text-color);
+    --sidebar-border: 0 0% 25%;
+    --sidebar-ring: var(--accent-color);
   }
 
   .dark {
-    /* Keep same colors as root for consistency */
-    --background: 220 25% 8%;
-    --foreground: 210 40% 95%;
+    --background: var(--bg-color);
+    --foreground: var(--text-color);
+    --card: var(--main-bg-color);
+    --card-foreground: var(--text-color);
+    --popover: var(--main-bg-color);
+    --popover-foreground: var(--text-color);
+    --primary: var(--accent-color);
+    --primary-foreground: 0 0% 100%;
+    --secondary: var(--code-bg-color);
+    --secondary-foreground: var(--text-color);
+    --muted: var(--code-bg-color);
+    --muted-foreground: 0 0% 60%;
+    --accent: var(--accent-color);
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 0 0% 25%;
+    --input: var(--code-bg-color);
+    --ring: var(--accent-color);
+    --success: var(--accent-color);
+    --warning: 45 93% 47%;
   }
 }
 
@@ -93,6 +85,7 @@ All colors MUST be HSL.
   }
 
   body {
+    font-family: 'Fira Code', 'Courier New', Courier, monospace;
     @apply bg-background text-foreground;
   }
 }
@@ -109,5 +102,10 @@ All colors MUST be HSL.
 
   .rotate-y-180 {
     transform: rotateY(180deg);
+  }
+  
+  /* Technical card styling */
+  .card-shadow {
+    box-shadow: var(--card-shadow);
   }
 }

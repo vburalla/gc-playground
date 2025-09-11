@@ -182,19 +182,19 @@ export const PCRegisterSimulator = () => {
       >
         {/* Front side - Java Code */}
         <Card
-          className="absolute inset-0 flex flex-col h-full"
+          className="absolute inset-0 flex flex-col h-full card-shadow bg-card border-border"
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(0deg)' }}
         >
           <CardHeader>
-            <CardTitle className="text-primary">Class: {title}</CardTitle>
+            <CardTitle className="text-primary text-lg">Class: {title}</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-auto pb-16">
-            <pre className="bg-muted/30 p-4 rounded-lg h-full overflow-auto font-mono text-sm">
-              <code>{javaCode}</code>
+            <pre className="bg-secondary p-5 rounded-lg h-full overflow-auto font-mono text-sm border border-border">
+              <code className="text-foreground">{javaCode}</code>
             </pre>
           </CardContent>
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-            <Button onClick={onFlip} variant="outline" size="sm" className="bg-muted hover:bg-muted/80">
+            <Button onClick={onFlip} variant="outline" size="sm" className="bg-secondary hover:bg-secondary/80 border-border">
               View Bytecode
             </Button>
           </div>
@@ -202,21 +202,21 @@ export const PCRegisterSimulator = () => {
         
         {/* Back side - Bytecode */}
         <Card
-          className="absolute inset-0 flex flex-col h-full"
+          className="absolute inset-0 flex flex-col h-full card-shadow bg-card border-border"
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
           <CardHeader>
-            <CardTitle className="text-primary">Bytecode: {title.replace('.java', '.class')}</CardTitle>
+            <CardTitle className="text-primary text-lg">Bytecode: {title.replace('.java', '.class')}</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-auto pb-16">
-            <pre className="bg-muted/30 p-4 rounded-lg h-full overflow-auto font-mono text-sm">
+            <pre className="bg-secondary p-5 rounded-lg h-full overflow-auto font-mono text-sm border border-border">
               <code>
                 {formatCode(bytecode, className, true)}
               </code>
             </pre>
           </CardContent>
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-            <Button onClick={onFlip} variant="outline" size="sm" className="bg-muted hover:bg-muted/80">
+            <Button onClick={onFlip} variant="outline" size="sm" className="bg-secondary hover:bg-secondary/80 border-border">
               View Java Code
             </Button>
           </div>
@@ -227,15 +227,15 @@ export const PCRegisterSimulator = () => {
 
   return (
     <div className="min-h-screen bg-gradient-bg">
-      <main className="w-full p-6">
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Java PC Register Simulator</h1>
-          <p className="text-muted-foreground">Observe the step-by-step execution through two Java classes</p>
-        </div>
-
-        <div className="w-full grid grid-cols-1 lg:grid-cols-3 items-start gap-10">
+      <header className="w-full text-center py-8 bg-secondary">
+        <h1 className="text-4xl font-bold text-foreground mb-2">Java PC Register Simulator</h1>
+        <p className="text-xl text-muted-foreground">Observe the step-by-step execution through two Java classes</p>
+      </header>
+      
+      <main className="w-full p-10 flex justify-center">
+        <div className="w-full max-w-[1600px] grid grid-cols-1 xl:grid-cols-[2fr_400px] items-start gap-10">
           {/* Left: two code cards */}
-          <div className="min-w-0 lg:col-span-2 grid gap-5 grid-cols-1 lg:grid-cols-2">
+          <div className="grid gap-5 grid-cols-1 lg:grid-cols-2">
             <div className="min-w-0">
               <FlipCard
                 title="Main.java"
@@ -260,24 +260,24 @@ export const PCRegisterSimulator = () => {
           </div>
 
           {/* Right: PC Register panel */}
-          <div className="w-full lg:col-span-1">
-            <Card className="h-[700px] flex flex-col">
+          <div className="w-full">
+            <Card className="h-[700px] flex flex-col card-shadow bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-primary text-center">PC Register Simulation</CardTitle>
+                <CardTitle className="text-primary text-center text-xl">PC Register Simulation</CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col items-center justify-center space-y-6">
+              <CardContent className="flex-1 flex flex-col items-center justify-center space-y-8">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-success mb-4">
+                  <div className="text-4xl font-bold text-primary mb-6">
                     PC: {pcValue}
                   </div>
-                  <div className="min-h-[80px] bg-muted/30 p-4 rounded-lg flex items-center justify-center text-center">
-                    <p className="text-foreground">{currentInstruction}</p>
+                  <div className="min-h-[80px] bg-secondary p-4 rounded-lg flex items-center justify-center text-center border border-border">
+                    <p className="text-foreground font-mono">{currentInstruction}</p>
                   </div>
                 </div>
                 <Button 
                   onClick={nextStep}
                   size="lg"
-                  className="mt-6"
+                  className="mt-8 bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
                 >
                   {isFinished ? '🔄 Restart Process' : '▶ Next Step'}
                 </Button>
