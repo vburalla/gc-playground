@@ -78,6 +78,12 @@ export default {
 				gc: {
 					'free-cell': 'hsl(var(--gc-free-cell))',
 					'free-cell-foreground': 'hsl(var(--gc-free-cell-foreground))',
+					'blue-fresh': 'hsl(var(--gc-blue-fresh))',
+					'blue-aging-1': 'hsl(var(--gc-blue-aging-1))',
+					'blue-aging-2': 'hsl(var(--gc-blue-aging-2))',
+					'blue-aging-3': 'hsl(var(--gc-blue-aging-3))',
+					'blue-old': 'hsl(var(--gc-blue-old))',
+					'blue-foreground': 'hsl(var(--gc-blue-foreground))',
 					'referenced-cell': 'hsl(var(--gc-referenced-cell))',
 					'referenced-cell-foreground': 'hsl(var(--gc-referenced-cell-foreground))',
 					'dereferenced-cell': 'hsl(var(--gc-dereferenced-cell))',

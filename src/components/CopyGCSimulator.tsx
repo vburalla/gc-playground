@@ -247,6 +247,14 @@ export const CopyGCSimulator = () => {
     }
   }, [gridSize]);
 
+  const getBlueProgression = (survivedCycles: number) => {
+    if (survivedCycles === 0) return "bg-gc-blue-fresh";
+    if (survivedCycles === 1) return "bg-gc-blue-aging-1";
+    if (survivedCycles === 2) return "bg-gc-blue-aging-2";
+    if (survivedCycles === 3) return "bg-gc-blue-aging-3";
+    return "bg-gc-blue-old";
+  };
+
   const getCellClassName = (cell: MemoryCell) => {
     const baseClass = cell.space === activeSpace ? "ring-2 ring-primary/50" : "opacity-60";
     
@@ -254,15 +262,15 @@ export const CopyGCSimulator = () => {
       case CellState.FREE:
         return `bg-gc-free-cell text-gc-free-cell-foreground border-border ${baseClass}`;
       case CellState.REFERENCED:
-        return `bg-gc-referenced-cell text-gc-referenced-cell-foreground border-gc-referenced-cell ${baseClass}`;
+        return `${getBlueProgression(cell.survivedCycles)} text-gc-blue-foreground border-border ${baseClass}`;
       case CellState.DEREFERENCED:
-        return `bg-gc-dereferenced-cell text-gc-dereferenced-cell-foreground border-gc-dereferenced-cell ${baseClass}`;
+        return `bg-gc-dereferenced-cell text-gc-dereferenced-cell-foreground border-border ${baseClass}`;
       case CellState.MARKED:
-        return `bg-gc-marked-cell text-gc-marked-cell-foreground border-gc-marked-cell ${baseClass}`;
+        return `bg-gc-marked-cell text-gc-marked-cell-foreground border-border ${baseClass}`;
       case CellState.SURVIVED:
-        return `bg-gc-survived-cell text-gc-survived-cell-foreground border-gc-survived-cell ${baseClass}`;
+        return `${getBlueProgression(cell.survivedCycles)} text-gc-blue-foreground border-border ${baseClass}`;
       case CellState.COPYING:
-        return `bg-gradient-to-r from-gc-marked-cell to-gc-survived-cell text-gc-survived-cell-foreground border-gc-survived-cell animate-pulse ${baseClass}`;
+        return `bg-warning text-warning-foreground border-border animate-pulse ${baseClass}`;
       default:
         return `bg-gc-free-cell text-gc-free-cell-foreground border-border ${baseClass}`;
     }

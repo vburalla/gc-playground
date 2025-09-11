@@ -45,9 +45,19 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
-    /* GC Simulator Colors */
+    /* GC Simulator Colors - Blue progression system */
     --gc-free-cell: 0 0% 95%;
     --gc-free-cell-foreground: 220 25% 8%;
+    
+    /* Blue color progression for allocated cells */
+    --gc-blue-fresh: 217 91% 60%;        /* Bright blue for new allocations */
+    --gc-blue-aging-1: 217 80% 55%;      /* Slightly muted */
+    --gc-blue-aging-2: 217 70% 50%;      /* More muted */
+    --gc-blue-aging-3: 217 60% 45%;      /* Getting gray-ish */
+    --gc-blue-old: 217 40% 40%;          /* Almost gray */
+    --gc-blue-foreground: 0 0% 100%;
+    
+    /* Legacy colors for compatibility */
     --gc-referenced-cell: 217 91% 60%;
     --gc-referenced-cell-foreground: 0 0% 100%;
     --gc-dereferenced-cell: 271 76% 53%;

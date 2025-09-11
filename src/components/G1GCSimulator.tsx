@@ -693,22 +693,30 @@ export const G1GCSimulator = () => {
     return baseColor;
   };
 
+  const getBlueProgression = (survivedCycles: number) => {
+    if (survivedCycles === 0) return "bg-gc-blue-fresh";
+    if (survivedCycles === 1) return "bg-gc-blue-aging-1";
+    if (survivedCycles === 2) return "bg-gc-blue-aging-2";
+    if (survivedCycles === 3) return "bg-gc-blue-aging-3";
+    return "bg-gc-blue-old";
+  };
+
   const getCellColor = (cell: MemoryCell) => {
     switch (cell.state) {
       case CellState.FREE:
-        return "bg-background border-border";
+        return "bg-gc-free-cell text-gc-free-cell-foreground border-border";
       case CellState.REFERENCED:
-        return "bg-primary/80 border-primary";
+        return `${getBlueProgression(cell.survivedCycles)} text-gc-blue-foreground border-border`;
       case CellState.DEREFERENCED:
-        return "bg-destructive/60 border-destructive";
+        return "bg-gc-dereferenced-cell text-gc-dereferenced-cell-foreground border-border";
       case CellState.MARKED:
-        return "bg-accent border-accent";
+        return "bg-gc-marked-cell text-gc-marked-cell-foreground border-border";
       case CellState.SURVIVED:
-        return "bg-success/80 border-success";
+        return `${getBlueProgression(cell.survivedCycles)} text-gc-blue-foreground border-border`;
       case CellState.COPYING:
-        return "bg-warning/80 border-warning";
+        return "bg-warning text-warning-foreground border-border animate-pulse";
       default:
-        return "bg-background border-border";
+        return "bg-gc-free-cell text-gc-free-cell-foreground border-border";
     }
   };
 

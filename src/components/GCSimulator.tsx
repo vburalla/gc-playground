@@ -175,18 +175,26 @@ export const GCSimulator = () => {
     }
   }, [gridSize]);
 
+  const getBlueProgression = (survivedCycles: number) => {
+    if (survivedCycles === 0) return "bg-gc-blue-fresh";
+    if (survivedCycles === 1) return "bg-gc-blue-aging-1";
+    if (survivedCycles === 2) return "bg-gc-blue-aging-2";
+    if (survivedCycles === 3) return "bg-gc-blue-aging-3";
+    return "bg-gc-blue-old";
+  };
+
   const getCellClassName = (cell: MemoryCell) => {
     switch (cell.state) {
       case CellState.FREE:
         return "bg-gc-free-cell text-gc-free-cell-foreground border-border";
       case CellState.REFERENCED:
-        return "bg-gc-referenced-cell text-gc-referenced-cell-foreground border-gc-referenced-cell";
+        return `${getBlueProgression(cell.survivedCycles)} text-gc-blue-foreground border-border`;
       case CellState.DEREFERENCED:
-        return "bg-gc-dereferenced-cell text-gc-dereferenced-cell-foreground border-gc-dereferenced-cell";
+        return "bg-gc-dereferenced-cell text-gc-dereferenced-cell-foreground border-border";
       case CellState.MARKED:
-        return "bg-gc-marked-cell text-gc-marked-cell-foreground border-gc-marked-cell";
+        return "bg-gc-marked-cell text-gc-marked-cell-foreground border-border";
       case CellState.SURVIVED:
-        return "bg-gc-survived-cell text-gc-survived-cell-foreground border-gc-survived-cell";
+        return `${getBlueProgression(cell.survivedCycles)} text-gc-blue-foreground border-border`;
       default:
         return "bg-gc-free-cell text-gc-free-cell-foreground border-border";
     }
