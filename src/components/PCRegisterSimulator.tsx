@@ -176,9 +176,9 @@ export const PCRegisterSimulator = () => {
     onFlip: () => void;
   }) => (
     <div className="w-full h-[700px] relative" style={{ perspective: '1200px' }}>
-      <div className={`w-full h-full relative transition-transform duration-700 transform-style-preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+      <div className={`w-full h-full relative transition-transform duration-700 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
         {/* Front side - Java Code */}
-        <Card className="absolute inset-0 backface-hidden flex flex-col h-full">
+        <Card className="absolute inset-0 [backface-visibility:hidden] flex flex-col h-full">
           <CardHeader>
             <CardTitle className="text-primary">Class: {title}</CardTitle>
           </CardHeader>
@@ -195,7 +195,7 @@ export const PCRegisterSimulator = () => {
         </Card>
         
         {/* Back side - Bytecode */}
-        <Card className="absolute inset-0 backface-hidden rotate-y-180 flex flex-col h-full">
+        <Card className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col h-full">
           <CardHeader>
             <CardTitle className="text-primary">Bytecode: {title.replace('.java', '.class')}</CardTitle>
           </CardHeader>
@@ -224,7 +224,7 @@ export const PCRegisterSimulator = () => {
           <p className="text-muted-foreground">Observe the step-by-step execution through two Java classes</p>
         </div>
 
-        <div className="w-full flex flex-col lg:flex-row gap-10">
+        <div className="w-full grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] items-start gap-10">
           {/* Left: two code cards */}
           <div className="flex-1 min-w-0 grid gap-5 grid-cols-1 lg:grid-cols-2">
             <div className="min-w-0">
@@ -251,7 +251,7 @@ export const PCRegisterSimulator = () => {
           </div>
 
           {/* Right: PC Register panel */}
-          <div className="w-full lg:w-[400px] lg:flex-shrink-0">
+          <div className="w-full min-w-0">
             <Card className="h-[700px] flex flex-col">
               <CardHeader>
                 <CardTitle className="text-primary text-center">PC Register Simulation</CardTitle>
