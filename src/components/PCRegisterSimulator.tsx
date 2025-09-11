@@ -224,9 +224,10 @@ export const PCRegisterSimulator = () => {
           <p className="text-muted-foreground">Observe the step-by-step execution through two Java classes</p>
         </div>
 
-        <div className="flex flex-row justify-center gap-10 w-full max-w-7xl mx-auto">
-          <div className="flex flex-row gap-5 flex-grow-2">
-            <div className="flex-1">
+        <div className="w-full mx-auto max-w-[1600px] grid gap-10 grid-cols-1 xl:grid-cols-[2fr_400px]">
+          {/* Left: two code cards */}
+          <div className="grid gap-5 grid-cols-1 xl:grid-cols-2 min-w-0">
+            <div className="min-w-0">
               <FlipCard
                 title="Main.java"
                 javaCode={mainJavaCode}
@@ -237,7 +238,7 @@ export const PCRegisterSimulator = () => {
               />
             </div>
 
-            <div className="flex-1">
+            <div className="min-w-0">
               <FlipCard
                 title="Calculator.java"
                 javaCode={calculatorJavaCode}
@@ -249,8 +250,8 @@ export const PCRegisterSimulator = () => {
             </div>
           </div>
 
-          {/* PC Register Simulation */}
-          <div className="w-[400px] flex-shrink-0">
+          {/* Right: PC Register panel */}
+          <div className="w-full xl:w-[400px] xl:flex-shrink-0">
             <Card className="h-[700px] flex flex-col">
               <CardHeader>
                 <CardTitle className="text-primary text-center">PC Register Simulation</CardTitle>
