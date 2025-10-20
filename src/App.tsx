@@ -11,7 +11,6 @@ import GenerationalGC from "./pages/GenerationalGC";
 import G1GC from "./pages/G1GC";
 import JVMSimulatorPage from "./pages/JVMSimulator";
 import PCRegister from "./pages/PCRegister";
-import VirtualThreads from "./pages/VirtualThreads";
 import NotFound from "./pages/NotFound";
 import { Navigation } from "./components/Navigation";
 
@@ -36,7 +35,6 @@ const App = () => (
                 <Route path="/g1" element={<G1GC />} />
                 <Route path="/jvm-simulator" element={<JVMSimulatorPage />} />
                 <Route path="/pc-register" element={<PCRegister />} />
-                <Route path="/virtual-threads" element={<VirtualThreads />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

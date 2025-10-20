@@ -34,16 +34,6 @@ export const Navigation = () => {
                   JVM Simulator
                 </NavLink>
               </Button>
-              <Button asChild size="sm">
-                <NavLink 
-                  to="/virtual-threads" 
-                  className={({ isActive }) => 
-                    `transition-all ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`
-                  }
-                >
-                  Virtual Threads
-                </NavLink>
-              </Button>
             </div>
             <div className="h-6 w-px bg-border"></div>
             <div className="flex gap-2">
