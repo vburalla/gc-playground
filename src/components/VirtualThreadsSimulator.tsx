@@ -139,53 +139,19 @@ export const VirtualThreadsSimulator = () => {
 
         <div className="grid grid-cols-1 gap-3">
           {/* JVM Section */}
-          <Card className="bg-card relative" style={{ minHeight: "250px" }}>
+          <Card className="bg-card relative" style={{ minHeight: "200px" }}>
             <CardHeader className="py-2 border-b">
               <CardTitle className="text-base">JVM</CardTitle>
             </CardHeader>
             <CardContent className="pt-4 pb-4 relative">
               {!isVirtual ? (
                 // Platform Threads Animation
-                <div className="relative flex items-start justify-center gap-8">
-                  {/* Thread Object */}
-                  {animationStep.showThreadObject && (
-                    <div className="relative">
-                      <div className="w-32 h-32 bg-muted rounded flex flex-col items-center justify-center animate-scale-in">
-                        <span className="text-xs font-semibold">
-                          {animationStep.threadObjectLabel}
-                        </span>
-                        {animationStep.showCreateText && (
-                          <span className="text-[10px] mt-1 text-muted-foreground animate-fade-in">
-                            Create
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Línea punteada hacia abajo */}
-                      {animationStep.showDottedLine && (
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-24 border-l-2 border-dashed border-primary animate-fade-in">
-                          {animationStep.showAskText && (
-                            <span className="absolute left-4 top-8 text-[9px] whitespace-nowrap animate-fade-in">
-                              Ask To Create Native(OS) Thread
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Status icon arriba del recuadro */}
-                      {animationStep.statusIcon && animationStep.showMappingBox && (
-                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xl animate-scale-in">
-                          {animationStep.statusIcon}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Execute Block */}
+                <div className="relative flex items-start justify-center gap-6">
+                  {/* Execute Block - left */}
                   {animationStep.showExecuteBlock && (
-                    <div className="space-y-1 animate-fade-in">
-                      <div className="text-xs font-semibold">Execute</div>
-                      <div className="bg-muted/50 rounded px-2 py-1 text-[10px] font-mono">
+                    <div className="space-y-1 animate-fade-in text-left">
+                      <div className="text-[11px] font-semibold">Execute</div>
+                      <div className="bg-muted/50 rounded px-2 py-1 text-[10px] font-mono shadow-sm">
                         run()&#123;...&#125;
                         <br />
                         start()
@@ -193,6 +159,40 @@ export const VirtualThreadsSimulator = () => {
                       {animationStep.showCreateStack && (
                         <div className="text-[10px] text-muted-foreground animate-fade-in">
                           Create Stack
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Thread Object - center */}
+                  {animationStep.showThreadObject && (
+                    <div className="relative">
+                      <div className="w-28 h-28 bg-muted rounded-md flex flex-col items-center justify-center animate-scale-in shadow">
+                        <span className="text-[11px] font-semibold">
+                          {animationStep.threadObjectLabel}
+                        </span>
+                        {animationStep.showCreateText && (
+                          <span className="text-[9px] mt-0.5 text-muted-foreground animate-fade-in">
+                            Create
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Línea punteada hacia abajo */}
+                      {animationStep.showDottedLine && (
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-20 border-l-2 border-dashed border-primary animate-fade-in">
+                          {animationStep.showAskText && (
+                            <span className="absolute left-3 top-6 text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 whitespace-nowrap animate-fade-in">
+                              Ask To Create Native(OS) Thread
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Status icon arriba del recuadro */}
+                      {animationStep.statusIcon && animationStep.showMappingBox && (
+                        <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-lg animate-scale-in">
+                          {animationStep.statusIcon}
                         </div>
                       )}
                     </div>
@@ -208,7 +208,7 @@ export const VirtualThreadsSimulator = () => {
           </Card>
 
           {/* OS Section */}
-          <Card className="bg-muted/30 relative" style={{ minHeight: "180px" }}>
+          <Card className="bg-muted/30 relative" style={{ minHeight: "140px" }}>
             <CardHeader className="py-2 border-b">
               <CardTitle className="text-base">OS</CardTitle>
             </CardHeader>
@@ -224,7 +224,7 @@ export const VirtualThreadsSimulator = () => {
                       
                       {/* Mapping Text */}
                       {animationStep.showMappingText && (
-                        <div className="absolute -right-36 top-1/2 -translate-y-1/2 text-[10px] whitespace-nowrap animate-fade-in">
+                        <div className="absolute -right-32 top-1/2 -translate-y-1/2 text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 whitespace-nowrap animate-fade-in">
                           One-to-One Mapping
                         </div>
                       )}
@@ -236,11 +236,11 @@ export const VirtualThreadsSimulator = () => {
                     <div 
                       className="absolute border-2 border-dashed border-primary rounded animate-fade-in"
                       style={{
-                        top: "-140px",
+                        top: "-120px",
                         left: "50%",
                         transform: "translateX(-50%)",
-                        width: "140px",
-                        height: "280px"
+                        width: "120px",
+                        height: "240px"
                       }}
                     />
                   )}
