@@ -146,10 +146,10 @@ export const VirtualThreadsSimulator = () => {
             <CardContent className="pt-4 pb-4 relative">
               {!isVirtual ? (
                 // Platform Threads Animation
-                <div className="relative flex items-start justify-center gap-6">
+                <div className="relative grid grid-cols-3 items-start gap-6">
                   {/* Execute Block - left */}
                   {animationStep.showExecuteBlock && (
-                    <div className="space-y-1 animate-fade-in text-left">
+                    <div className="col-start-1 justify-self-end space-y-1 animate-fade-in text-left">
                       <div className="text-[11px] font-semibold">Execute</div>
                       <div className="bg-muted/50 rounded px-2 py-1 text-[10px] font-mono shadow-sm">
                         run()&#123;...&#125;
@@ -166,7 +166,7 @@ export const VirtualThreadsSimulator = () => {
 
                   {/* Thread Object - center */}
                   {animationStep.showThreadObject && (
-                    <div className="relative">
+                    <div className="col-start-2 justify-self-center relative">
                       <div className="w-28 h-28 bg-muted rounded-md flex flex-col items-center justify-center animate-scale-in shadow">
                         <span className="text-[11px] font-semibold">
                           {animationStep.threadObjectLabel}
@@ -180,9 +180,15 @@ export const VirtualThreadsSimulator = () => {
 
                       {/* Línea punteada hacia abajo */}
                       {animationStep.showDottedLine && (
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-20 border-l-2 border-dashed border-primary animate-fade-in">
+                        <div
+                          className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 border-l-2 border-dashed border-primary animate-fade-in"
+                          style={{ height: "220px" }}
+                        >
                           {animationStep.showAskText && (
-                            <span className="absolute left-3 top-6 text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 whitespace-nowrap animate-fade-in">
+                            <span
+                              className="absolute text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 whitespace-nowrap animate-fade-in"
+                              style={{ left: "14px", top: "110px" }}
+                            >
                               Ask To Create Native(OS) Thread
                             </span>
                           )}
@@ -197,6 +203,9 @@ export const VirtualThreadsSimulator = () => {
                       )}
                     </div>
                   )}
+
+                  {/* Empty right spacer to preserve centering */}
+                  <div className="col-start-3" />
                 </div>
               ) : (
                 // Virtual Threads - TODO
@@ -236,11 +245,11 @@ export const VirtualThreadsSimulator = () => {
                     <div 
                       className="absolute border-2 border-dashed border-primary rounded animate-fade-in"
                       style={{
-                        top: "-120px",
+                        top: "-140px",
                         left: "50%",
                         transform: "translateX(-50%)",
-                        width: "120px",
-                        height: "240px"
+                        width: "136px",
+                        height: "280px"
                       }}
                     />
                   )}
