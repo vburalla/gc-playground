@@ -143,64 +143,62 @@ export const VirtualThreadsSimulator = () => {
             <CardHeader className="py-2 border-b">
               <CardTitle className="text-base">JVM</CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 pb-6 relative">
+            <CardContent className="pt-6 pb-6 relative min-h-[300px]">
               {!isVirtual ? (
                 // Platform Threads Animation
-                <div className="relative flex items-start justify-center">
-                  <div className="flex items-start gap-12">
-                    {/* Execute Block - left */}
-                    {animationStep.showExecuteBlock && (
-                      <div className="space-y-1 animate-fade-in text-left pt-8">
-                        <div className="text-xs font-semibold">Execute</div>
-                        <div className="bg-muted/70 rounded px-3 py-2 text-[11px] font-mono shadow-sm border border-border/50">
-                          run()&#123;...&#125;
-                          <br />
-                          start()
-                        </div>
-                        {animationStep.showCreateStack && (
-                          <div className="text-[11px] text-muted-foreground animate-fade-in pt-1">
-                            Create Stack
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Thread Object - center */}
-                    {animationStep.showThreadObject && (
-                      <div className="relative flex flex-col items-center">
-                        <div className="w-32 h-32 bg-muted/80 rounded-lg flex flex-col items-center justify-center animate-scale-in shadow-md border border-border/50">
-                          <span className="text-sm font-semibold">
-                            {animationStep.threadObjectLabel}
+                <div className="relative w-full h-full flex items-center justify-center">
+                  {/* Thread Object - centro absoluto */}
+                  {animationStep.showThreadObject && (
+                    <div className="absolute left-1/2 top-12 -translate-x-1/2">
+                      <div className="w-32 h-32 bg-muted/80 rounded-lg flex flex-col items-center justify-center animate-scale-in shadow-md border border-border/50">
+                        <span className="text-sm font-semibold">
+                          {animationStep.threadObjectLabel}
+                        </span>
+                        {animationStep.showCreateText && (
+                          <span className="text-[11px] mt-1 text-muted-foreground animate-fade-in">
+                            Create
                           </span>
-                          {animationStep.showCreateText && (
-                            <span className="text-[11px] mt-1 text-muted-foreground animate-fade-in">
-                              Create
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Status icon arriba del thread */}
-                        {animationStep.statusIcon && (
-                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl animate-scale-in">
-                            {animationStep.statusIcon}
-                          </div>
-                        )}
-
-                        {/* Línea punteada hacia abajo */}
-                        {animationStep.showDottedLine && (
-                          <div className="relative w-0.5 border-l-2 border-dashed border-primary animate-fade-in" style={{ height: "180px" }}>
-                            {animationStep.showAskText && (
-                              <div className="absolute left-4 top-20 animate-fade-in">
-                                <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 whitespace-nowrap shadow-sm">
-                                  Ask To Native(OS) Thread
-                                </span>
-                              </div>
-                            )}
-                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
+
+                      {/* Status icon arriba del thread */}
+                      {animationStep.statusIcon && (
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl animate-scale-in">
+                          {animationStep.statusIcon}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Execute Block - izquierda del thread */}
+                  {animationStep.showExecuteBlock && animationStep.showThreadObject && (
+                    <div className="absolute left-1/2 top-12 -translate-x-full -ml-8 space-y-1 animate-fade-in text-left">
+                      <div className="text-xs font-semibold">Execute</div>
+                      <div className="bg-muted/70 rounded px-3 py-2 text-[11px] font-mono shadow-sm border border-border/50">
+                        run()&#123;...&#125;
+                        <br />
+                        start()
+                      </div>
+                      {animationStep.showCreateStack && (
+                        <div className="text-[11px] text-muted-foreground animate-fade-in pt-1">
+                          Create Stack
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Línea punteada hacia abajo */}
+                  {animationStep.showDottedLine && animationStep.showThreadObject && (
+                    <div className="absolute left-1/2 top-44 -translate-x-1/2 w-0.5 border-l-2 border-dashed border-primary animate-fade-in" style={{ height: "200px" }}>
+                      {animationStep.showAskText && (
+                        <div className="absolute left-4 top-24 animate-fade-in">
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 whitespace-nowrap shadow-sm">
+                            Ask To Native(OS) Thread
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 // Virtual Threads - TODO
@@ -212,16 +210,16 @@ export const VirtualThreadsSimulator = () => {
           </Card>
 
           {/* OS Section */}
-          <Card className="bg-muted/30 relative" style={{ minHeight: "160px" }}>
+          <Card className="bg-muted/30 relative" style={{ minHeight: "180px" }}>
             <CardHeader className="py-2 border-b">
               <CardTitle className="text-base">OS</CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 pb-6 relative">
+            <CardContent className="pt-8 pb-8 relative min-h-[160px]">
               {!isVirtual ? (
-                <div className="relative flex items-center justify-center">
-                  {/* OS Thread */}
+                <div className="relative w-full h-full flex items-start justify-center">
+                  {/* OS Thread - centrado */}
                   {animationStep.showOSThread && (
-                    <div className="relative">
+                    <div className="relative mt-4">
                       <div className="w-32 h-32 bg-muted/80 rounded-lg flex items-center justify-center animate-scale-in shadow-md border border-border/50">
                         <span className="text-sm font-semibold">OS Thread</span>
                       </div>
@@ -242,11 +240,11 @@ export const VirtualThreadsSimulator = () => {
                     <div 
                       className="absolute border-2 border-dashed border-primary/60 rounded-lg animate-fade-in"
                       style={{
-                        top: "-225px",
+                        top: "-310px",
                         left: "50%",
                         transform: "translateX(-50%)",
-                        width: "140px",
-                        height: "360px"
+                        width: "144px",
+                        height: "475px"
                       }}
                     />
                   )}
