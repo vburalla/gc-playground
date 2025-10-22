@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -21,88 +21,60 @@ export const VirtualThreadsSimulator = () => {
   const [isVirtual, setIsVirtual] = useState(false);
   const [animationStep, setAnimationStep] = useState<AnimationStep>({});
 
-  useEffect(() => {
-    if (!isVirtual) {
-      // Platform Threads animation sequence
-      setAnimationStep({});
-      
-      const timeouts: NodeJS.Timeout[] = [];
-      
-      // Paso 1: Thread Object aparece (0.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep({ showThreadObject: true, threadObjectLabel: "Thread Object" });
-      }, 300));
-      
-      // Paso 2: Texto "Create" (1.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, showCreateText: true }));
-      }, 1300));
-      
-      // Paso 3: Execute y run() block (3.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, showExecuteBlock: true }));
-      }, 3300));
-      
-      // Paso 4: Línea punteada (6.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, showDottedLine: true }));
-      }, 6300));
-      
-      // Paso 5: OS Thread aparece (7.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, showOSThread: true }));
-      }, 7300));
-      
-      // Paso 6: Texto "Ask To Create..." (8.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, showAskText: true }));
-      }, 8300));
-      
-      // Paso 7: Recuadro punteado (11.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, showMappingBox: true }));
-      }, 11300));
-      
-      // Paso 8: "One-to-One Mapping" (12.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, showMappingText: true }));
-      }, 12300));
-      
-      // Paso 9: "Create Stack" (14.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, showCreateStack: true }));
-      }, 14300));
-      
-      // Paso 10: Cambiar a "Platform Thread" (16.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, threadObjectLabel: "Platform Thread" }));
-      }, 16300));
-      
-      // Paso 11: Íconos de progreso
-      // ⏳ (17.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, statusIcon: "⏳" }));
-      }, 17300));
-      
-      // 🔄 (18.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, statusIcon: "🔄" }));
-      }, 18300));
-      
-      // ✅ (19.3s)
-      timeouts.push(setTimeout(() => {
-        setAnimationStep(prev => ({ ...prev, statusIcon: "✅" }));
-      }, 19300));
+// Refs and looping sequence handling
+const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
+const isVirtualRef = useRef(isVirtual);
 
-      return () => {
-        timeouts.forEach(timeout => clearTimeout(timeout));
-      };
-    } else {
-      // Virtual Threads - simple animation
-      setAnimationStep({});
-      // TODO: Implementar animación de Virtual Threads cuando me proporciones el flujo detallado
+useEffect(() => {
+  isVirtualRef.current = isVirtual;
+}, [isVirtual]);
+
+const clearAllTimers = () => {
+  timeoutsRef.current.forEach((t) => clearTimeout(t));
+  timeoutsRef.current = [];
+};
+
+const runPlatformSequence = () => {
+  clearAllTimers();
+  setAnimationStep({});
+  const push = (ms: number, fn: () => void) => {
+    const t = setTimeout(fn, ms);
+    timeoutsRef.current.push(t);
+  };
+
+  // Sequence
+  push(300, () => setAnimationStep({ showThreadObject: true, threadObjectLabel: "Thread Object" }));
+  push(1300, () => setAnimationStep(prev => ({ ...prev, showCreateText: true })));
+  push(3300, () => setAnimationStep(prev => ({ ...prev, showExecuteBlock: true })));
+  push(6300, () => setAnimationStep(prev => ({ ...prev, showDottedLine: true })));
+  push(7300, () => setAnimationStep(prev => ({ ...prev, showOSThread: true })));
+  push(8300, () => setAnimationStep(prev => ({ ...prev, showAskText: true })));
+  push(11300, () => setAnimationStep(prev => ({ ...prev, showMappingBox: true })));
+  push(12300, () => setAnimationStep(prev => ({ ...prev, showMappingText: true })));
+  push(14300, () => setAnimationStep(prev => ({ ...prev, showCreateStack: true })));
+  push(16300, () => setAnimationStep(prev => ({ ...prev, threadObjectLabel: "Platform Thread" })));
+  push(17300, () => setAnimationStep(prev => ({ ...prev, statusIcon: "⏳" })));
+  push(18300, () => setAnimationStep(prev => ({ ...prev, statusIcon: "🔄" })));
+  push(19300, () => setAnimationStep(prev => ({ ...prev, statusIcon: "✅" })));
+
+  // Restart after 5s pause
+  push(19300 + 5000, () => {
+    if (!isVirtualRef.current) {
+      runPlatformSequence();
     }
-  }, [isVirtual]);
+  });
+};
+
+useEffect(() => {
+  if (!isVirtual) {
+    runPlatformSequence();
+  } else {
+    clearAllTimers();
+    setAnimationStep({});
+    // TODO: Virtual Threads sequence to be implemented when flow is defined
+  }
+  return () => clearAllTimers();
+}, [isVirtual]);
 
   const handleSwitchChange = (checked: boolean) => {
     setIsVirtual(checked);
@@ -155,7 +127,7 @@ export const VirtualThreadsSimulator = () => {
                           {animationStep.threadObjectLabel}
                         </span>
                         {animationStep.showCreateText && (
-                          <span className="text-[11px] mt-1 text-muted-foreground animate-fade-in">
+                          <span className="text-[11px] mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 animate-fade-in">
                             Create
                           </span>
                         )}
