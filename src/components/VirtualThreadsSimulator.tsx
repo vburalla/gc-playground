@@ -20,6 +20,17 @@ interface AnimationStep {
 export const VirtualThreadsSimulator = () => {
   const [isVirtual, setIsVirtual] = useState(false);
   const [animationStep, setAnimationStep] = useState<AnimationStep>({});
+  
+  // Overlay positioning refs/state
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const threadAnchorRef = useRef<HTMLDivElement | null>(null);
+  const osAnchorRef = useRef<HTMLDivElement | null>(null);
+  const [overlayPos, setOverlayPos] = useState<{
+    line: null | { x: number; y1: number; y2: number };
+    rect: null | { x: number; y: number; w: number; h: number };
+    ask: null | { x: number; y: number };
+    mapping: null | { x: number; y: number };
+  }>({ line: null, rect: null, ask: null, mapping: null });
 
 // Refs and looping sequence handling
 const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
@@ -109,7 +120,7 @@ useEffect(() => {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 gap-3">
+        <div className="relative grid grid-cols-1 gap-3" ref={containerRef}>
           {/* JVM Section */}
           <Card className="bg-card relative" style={{ minHeight: "200px" }}>
             <CardHeader className="py-2 border-b">
@@ -175,35 +186,7 @@ useEffect(() => {
                     </div>
                   )}
 
-                  {/* Línea punteada hacia abajo */}
-                  {animationStep.showDottedLine && animationStep.showThreadObject && (
-                    <div 
-                      className="absolute animate-fade-in"
-                      style={{
-                        left: "50%",
-                        top: "224px",
-                        transform: "translateX(-50%)",
-                        width: "2px",
-                        height: "120px",
-                        borderLeft: "2px dashed hsl(var(--primary))"
-                      }}
-                    >
-                      {animationStep.showAskText && (
-                        <div 
-                          className="absolute animate-fade-in whitespace-nowrap"
-                          style={{
-                            left: "12px",
-                            top: "50%",
-                            transform: "translateY(-50%)"
-                          }}
-                        >
-                          <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 shadow-sm">
-                            Ask To Native(OS) Thread
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* Dotted line handled by overlay */}
                 </div>
               ) : (
                 // Virtual Threads - TODO
