@@ -21,76 +21,12 @@ export const VirtualThreadsSimulator = () => {
   const [isVirtual, setIsVirtual] = useState(false);
   const [animationStep, setAnimationStep] = useState<AnimationStep>({});
   
-  // Overlay positioning refs/state
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const threadAnchorRef = useRef<HTMLDivElement | null>(null);
-  const osAnchorRef = useRef<HTMLDivElement | null>(null);
-  const [overlayPos, setOverlayPos] = useState<{
-    line: null | { x: number; y1: number; y2: number };
-    rect: null | { x: number; y: number; w: number; h: number };
-    ask: null | { x: number; y: number };
-    mapping: null | { x: number; y: number };
-  }>({ line: null, rect: null, ask: null, mapping: null });
+  const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
+  const isVirtualRef = useRef(isVirtual);
 
-// Refs and looping sequence handling
-const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
-const isVirtualRef = useRef(isVirtual);
-
-useEffect(() => {
-  isVirtualRef.current = isVirtual;
-}, [isVirtual]);
-
-// Overlay measurement and updates
-const computeOverlay = () => {
-  if (!containerRef.current || !threadAnchorRef.current || !osAnchorRef.current) {
-    setOverlayPos({ line: null, rect: null, ask: null, mapping: null });
-    return;
-  }
-  const container = containerRef.current.getBoundingClientRect();
-  const thread = threadAnchorRef.current.getBoundingClientRect();
-  const os = osAnchorRef.current.getBoundingClientRect();
-
-  const centerX = thread.left - container.left + thread.width / 2;
-
-  const y1 = thread.bottom - container.top;
-  const y2 = os.top - container.top;
-
-  const line = { x: centerX, y1: y1 + 8, y2: y2 - 8 };
-
-  const w = Math.max(thread.width, os.width) + 16;
-  const rect = {
-    x: centerX - w / 2,
-    y: y1 + 8,
-    w,
-    h: Math.max(0, (os.top - thread.bottom) - 16),
-  };
-
-  const midY = (line.y1 + line.y2) / 2;
-
-  setOverlayPos({
-    line,
-    rect,
-    ask: { x: centerX + 12, y: midY },
-    mapping: { x: centerX + w / 2 + 12, y: os.top - container.top + os.height / 2 },
-  });
-};
-
-useEffect(() => {
-  if (isVirtual || !animationStep.showThreadObject || !animationStep.showOSThread) {
-    setOverlayPos({ line: null, rect: null, ask: null, mapping: null });
-    return;
-  }
-  computeOverlay();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [isVirtual, animationStep.showThreadObject, animationStep.showOSThread, animationStep.showDottedLine, animationStep.showMappingBox, animationStep.showAskText, animationStep.showMappingText]);
-
-useEffect(() => {
-  if (isVirtual) return;
-  const onResize = () => computeOverlay();
-  window.addEventListener("resize", onResize);
-  return () => window.removeEventListener("resize", onResize);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [isVirtual]);
+  useEffect(() => {
+    isVirtualRef.current = isVirtual;
+  }, [isVirtual]);
 
 const clearAllTimers = () => {
   timeoutsRef.current.forEach((t) => clearTimeout(t));
@@ -172,7 +108,7 @@ useEffect(() => {
           </CardContent>
         </Card>
 
-        <div className="relative grid grid-cols-1 gap-3" ref={containerRef}>
+        <div className="relative grid grid-cols-1 gap-3">
           {/* JVM Section */}
           <Card className="bg-card relative" style={{ minHeight: "200px" }}>
             <CardHeader className="py-2 border-b">
@@ -185,7 +121,6 @@ useEffect(() => {
                   {/* Thread Object - centro superior */}
                   {animationStep.showThreadObject && (
                     <div 
-                      ref={threadAnchorRef}
                       className="absolute animate-scale-in"
                       style={{ 
                         left: "50%", 
@@ -239,7 +174,35 @@ useEffect(() => {
                     </div>
                   )}
 
-                  {/* Dotted line handled by overlay */}
+                  {/* Línea punteada conectando Thread Object con OS Thread */}
+                  {animationStep.showDottedLine && animationStep.showThreadObject && (
+                    <div 
+                      className="absolute animate-fade-in"
+                      style={{
+                        left: "50%",
+                        top: "224px",
+                        transform: "translateX(-50%)",
+                        width: "2px",
+                        height: "150px",
+                        borderLeft: "2px dashed hsl(var(--primary))"
+                      }}
+                    >
+                      {animationStep.showAskText && (
+                        <div 
+                          className="absolute animate-fade-in whitespace-nowrap"
+                          style={{
+                            left: "12px",
+                            top: "50%",
+                            transform: "translateY(-50%)"
+                          }}
+                        >
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 shadow-sm">
+                            Ask To Native(OS) Thread
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 // Virtual Threads - TODO
@@ -261,7 +224,6 @@ useEffect(() => {
                   {/* OS Thread - centro */}
                   {animationStep.showOSThread && (
                     <div 
-                      ref={osAnchorRef}
                       className="absolute animate-scale-in"
                       style={{ 
                         left: "50%", 
@@ -273,7 +235,21 @@ useEffect(() => {
                         <span className="text-sm font-semibold">OS Thread</span>
                       </div>
                       
-                      {/* Mapping label handled by overlay */}
+                      {/* Mapping Text a la derecha */}
+                      {animationStep.showMappingText && (
+                        <div 
+                          className="absolute animate-fade-in whitespace-nowrap"
+                          style={{
+                            left: "calc(100% + 16px)",
+                            top: "50%",
+                            transform: "translateY(-50%)"
+                          }}
+                        >
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 shadow-sm">
+                            One-to-One Mapping
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                   
@@ -283,10 +259,10 @@ useEffect(() => {
                       className="absolute border-2 border-dashed border-primary/60 rounded-lg animate-fade-in pointer-events-none"
                       style={{
                         left: "50%",
-                        top: "-272px",
+                        top: "-300px",
                         transform: "translateX(-50%)",
-                        width: "152px",
-                        height: "520px"
+                        width: "160px",
+                        height: "550px"
                       }}
                     />
                   )}
@@ -298,61 +274,6 @@ useEffect(() => {
               )}
             </CardContent>
           </Card>
-
-          {/* Overlay SVG connecting elements */}
-          {!isVirtual && (
-            <div className="pointer-events-none absolute inset-0 z-10">
-              <svg width="100%" height="100%">
-                {animationStep.showDottedLine && overlayPos.line && (
-                  <line
-                    x1={overlayPos.line.x}
-                    y1={overlayPos.line.y1}
-                    x2={overlayPos.line.x}
-                    y2={overlayPos.line.y2}
-                    stroke="hsl(var(--primary))"
-                    strokeWidth="2"
-                    strokeDasharray="6 6"
-                  />
-                )}
-                {animationStep.showMappingBox && overlayPos.rect && (
-                  <rect
-                    x={overlayPos.rect.x}
-                    y={overlayPos.rect.y}
-                    width={overlayPos.rect.w}
-                    height={overlayPos.rect.h}
-                    fill="none"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth="2"
-                    strokeDasharray="8 8"
-                    rx="8"
-                    ry="8"
-                  />
-                )}
-              </svg>
-
-              {animationStep.showAskText && overlayPos.ask && (
-                <div
-                  className="absolute animate-fade-in"
-                  style={{ left: overlayPos.ask.x, top: overlayPos.ask.y, transform: "translateY(-50%)" }}
-                >
-                  <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 shadow-sm">
-                    Ask To Native(OS) Thread
-                  </span>
-                </div>
-              )}
-
-              {animationStep.showMappingText && overlayPos.mapping && (
-                <div
-                  className="absolute animate-fade-in whitespace-nowrap"
-                  style={{ left: overlayPos.mapping.x, top: overlayPos.mapping.y, transform: "translateY(-50%)" }}
-                >
-                  <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 shadow-sm">
-                    One-to-One Mapping
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         <Card className="bg-primary/5 border-primary/20">
