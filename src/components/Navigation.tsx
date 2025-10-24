@@ -7,10 +7,10 @@ export const Navigation = () => {
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex-1 text-center">
-            <h1 className="text-2xl font-bold text-foreground bg-gradient-to-r from-primary to-ring bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold text-foreground bg-gradient-to-r from-primary to-ring bg-clip-text text-transparent leading-tight">
               Java Virtual Machine Explorer
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Garbage Collection & JVM Memory Simulation</p>
+            <p className="text-lg text-muted-foreground mt-2">Garbage Collection & JVM Memory Simulation</p>
           </div>
           <nav className="flex gap-2 flex-wrap">
             <div className="flex gap-2">
