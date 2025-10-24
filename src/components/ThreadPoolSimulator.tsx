@@ -272,10 +272,10 @@ export const ThreadPoolSimulator = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background w-full">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur">
-        <div className="container mx-auto px-6 py-8">
+      <header className="border-b bg-card/50 backdrop-blur w-full">
+        <div className="w-full px-6 py-8">
           <h1
             className={`text-4xl font-bold text-center mb-2 font-mono transition-colors ${
               mode === "threadpool" ? "text-orange-500" : "text-green-500"
@@ -329,7 +329,8 @@ export const ThreadPoolSimulator = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8 max-w-7xl">
+      <main className="w-full px-6 py-8 flex justify-center">
+        <div className="max-w-7xl w-full">
         {/* ThreadPool Content */}
         {mode === "threadpool" && (
           <div>
@@ -673,6 +674,7 @@ export const ThreadPoolSimulator = () => {
             </Card>
           </div>
         )}
+        </div>
       </main>
     </div>
   );
