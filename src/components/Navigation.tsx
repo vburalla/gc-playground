@@ -44,6 +44,16 @@ export const Navigation = () => {
                   Virtual Threads
                 </NavLink>
               </Button>
+              <Button asChild size="sm">
+                <NavLink 
+                  to="/threadpool" 
+                  className={({ isActive }) => 
+                    `transition-all ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`
+                  }
+                >
+                  ThreadPool
+                </NavLink>
+              </Button>
             </div>
             <div className="h-6 w-px bg-border"></div>
             <div className="flex gap-2">

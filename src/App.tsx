@@ -12,6 +12,7 @@ import G1GC from "./pages/G1GC";
 import JVMSimulatorPage from "./pages/JVMSimulator";
 import PCRegister from "./pages/PCRegister";
 import VirtualThreads from "./pages/VirtualThreads";
+import ThreadPool from "./pages/ThreadPool";
 import NotFound from "./pages/NotFound";
 import { Navigation } from "./components/Navigation";
 
@@ -37,6 +38,7 @@ const App = () => (
                 <Route path="/jvm-simulator" element={<JVMSimulatorPage />} />
                 <Route path="/pc-register" element={<PCRegister />} />
                 <Route path="/virtual-threads" element={<VirtualThreads />} />
+                <Route path="/threadpool" element={<ThreadPool />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
