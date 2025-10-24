@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 export const Navigation = () => {
   return (
     <header className="w-full bg-gradient-bg border-b border-border/50 shadow-lg backdrop-blur-sm">
-      <div className="container mx-auto px-6 py-4">
+      <div className="w-full px-4 py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1 text-left min-w-0 pr-4">
             <h1 className="text-2xl font-bold text-foreground bg-gradient-to-r from-primary to-ring bg-clip-text text-transparent">
