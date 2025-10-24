@@ -330,7 +330,7 @@ export const ThreadPoolSimulator = () => {
       </header>
 
       <main className="w-full px-6 py-8 flex justify-center">
-        <div className="max-w-7xl w-full">
+        <div className="max-w-7xl w-full mx-auto">
         {/* ThreadPool Content */}
         {mode === "threadpool" && (
           <div>
