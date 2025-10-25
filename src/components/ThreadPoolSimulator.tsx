@@ -432,7 +432,7 @@ export const ThreadPoolSimulator = () => {
         ...w,
         status: "blocked",
         queue: w.queue.map((task, idx) =>
-          idx === w.queue.length - 1 ? { ...task, state: "blocked" } : task
+          idx === 0 ? { ...task, state: "blocked" } : task
         ),
       }))
     );
@@ -449,11 +449,15 @@ export const ThreadPoolSimulator = () => {
     setBlockingStatusText("5. Simulación: Las tareas I/O finalmente terminan. El Pool se desbloquea.");
     setShowDeadlockWarning(false);
     setBlockingWorkers((prev) =>
-      prev.map((w) => ({
-        ...w,
-        status: "working",
-        queue: w.queue.slice(0, -1), // Remove the I/O task
-      }))
+      prev.map((w) => {
+        const idx = w.queue.findIndex((t) => t.state === "blocked");
+        if (idx >= 0) {
+          const newQueue = [...w.queue];
+          newQueue.splice(idx, 1); // remove blocked task
+          return { ...w, status: "working", queue: newQueue };
+        }
+        return { ...w, status: "working" };
+      })
     );
 
     await new Promise((r) => setTimeout(r, 2500));
@@ -462,15 +466,25 @@ export const ThreadPoolSimulator = () => {
     setBlockingStatusText("6. El Pool procesa las 12 tareas CPU restantes (A4, A3, A2, A1, etc.) en modo LIFO.");
     
     const processRemainingTasks = async () => {
-      while (blockingWorkers.some(w => w.queue.length > 0)) {
-        setBlockingWorkers((prev) =>
-          prev.map((w) => ({
-            ...w,
-            queue: w.queue.length > 0 ? w.queue.slice(0, -1) : [],
-            status: w.queue.length > 1 ? "working" : "idle",
-          }))
-        );
-        await new Promise((r) => setTimeout(r, 500));
+      let any = true;
+      while (any) {
+        any = false;
+        setBlockingWorkers((prev) => {
+          const updated: BlockingWorker[] = prev.map((w) => {
+            if (w.queue.length > 0) {
+              any = true;
+              const newQueue = w.queue.slice(1); // remove LIFO (front)
+              return {
+                ...w,
+                queue: newQueue,
+                status: (newQueue.length > 0 ? "working" : "idle") as BlockingWorker["status"],
+              };
+            }
+            return { ...w, status: "idle" as BlockingWorker["status"] };
+          });
+          return updated;
+        });
+        if (any) await new Promise((r) => setTimeout(r, 500));
       }
     };
 
