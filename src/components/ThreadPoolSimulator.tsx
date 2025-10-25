@@ -197,20 +197,20 @@ export const ThreadPoolSimulator = () => {
     setIsRunning(true);
     resetForkJoinPool();
 
-    // Initialize worker queues
+    // Initialize worker queues (newest-first for LIFO rendering)
     const workerATasks = [
-      createTask("A1", "cpu"),
-      createTask("A2", "cpu"),
-      createTask("A3", "cpu"),
       createTask("A4", "cpu"),
+      createTask("A3", "cpu"),
+      createTask("A2", "cpu"),
+      createTask("A1", "cpu"),
     ];
     const workerBTasks = [
-      createTask("B1", "cpu"),
-      createTask("B2", "cpu"),
-      createTask("B3", "cpu"),
       createTask("B4", "cpu"),
+      createTask("B3", "cpu"),
+      createTask("B2", "cpu"),
+      createTask("B1", "cpu"),
     ];
-    const workerCTasks = [createTask("C1", "cpu"), createTask("C2", "cpu")];
+    const workerCTasks = [createTask("C2", "cpu"), createTask("C1", "cpu")];
 
     setFjpWorkers([
       { id: 1, status: "working", currentTask: null, queue: workerATasks },
@@ -226,12 +226,12 @@ export const ThreadPoolSimulator = () => {
     setFjpWorkers((prev) =>
       prev.map((w) => {
         if (w.queue && w.queue.length > 0) {
-          const task = w.queue[w.queue.length - 1];
+          const task = w.queue[0]; // LIFO: newest is at index 0
           return {
             ...w,
             status: "working",
             currentTask: { ...task, state: "processing" },
-            queue: w.queue.slice(0, -1),
+            queue: w.queue.slice(1),
           };
         }
         return w;
@@ -249,12 +249,12 @@ export const ThreadPoolSimulator = () => {
     setFjpWorkers((prev) =>
       prev.map((w) => {
         if (w.queue && w.queue.length > 0) {
-          const task = w.queue[w.queue.length - 1];
+          const task = w.queue[0]; // LIFO: newest at index 0
           return {
             ...w,
             status: "working",
             currentTask: { ...task, state: "processing" },
-            queue: w.queue.slice(0, -1),
+            queue: w.queue.slice(1),
           };
         }
         return w;
@@ -277,28 +277,29 @@ export const ThreadPoolSimulator = () => {
       const newWorkers = [...prev];
       const workerA = newWorkers[0];
       
-      // Worker A and B process their LIFO
+      // Worker A and B process their LIFO (take from front)
       newWorkers[0] = {
         ...workerA,
         currentTask: workerA.queue && workerA.queue.length > 0 
-          ? { ...workerA.queue[workerA.queue.length - 1], state: "processing" } 
+          ? { ...workerA.queue[0], state: "processing" } 
           : null,
-        queue: workerA.queue ? workerA.queue.slice(0, -1) : [],
+        queue: workerA.queue ? workerA.queue.slice(1) : [],
       };
 
       const workerB = newWorkers[1];
       newWorkers[1] = {
         ...workerB,
         currentTask: workerB.queue && workerB.queue.length > 0
-          ? { ...workerB.queue[workerB.queue.length - 1], state: "processing" }
+          ? { ...workerB.queue[0], state: "processing" }
           : null,
-        queue: workerB.queue ? workerB.queue.slice(0, -1) : [],
+        queue: workerB.queue ? workerB.queue.slice(1) : [],
       };
 
-      // Worker C steals from A (FIFO - oldest)
-      if (workerA.queue && workerA.queue.length > 0) {
-        const stolenTask = workerA.queue[0];
-        newWorkers[0].queue = workerA.queue.slice(1);
+      // Worker C steals from A (FIFO - oldest from updated A queue)
+      const sourceQueue = newWorkers[0].queue || [];
+      if (sourceQueue.length > 0) {
+        const stolenTask = sourceQueue[sourceQueue.length - 1];
+        newWorkers[0].queue = sourceQueue.slice(0, -1);
         newWorkers[2] = {
           ...newWorkers[2],
           status: "stealing",
@@ -311,9 +312,7 @@ export const ThreadPoolSimulator = () => {
 
     await new Promise((r) => setTimeout(r, 2500));
 
-    // Clear current tasks
-    setFjpWorkers((prev) => prev.map((w) => ({ ...w, currentTask: null })));
-    await new Promise((r) => setTimeout(r, 500));
+    // Continúa el procesamiento sin limpiar tareas para mantener la robada en C
 
     // Step 5: C processes A1, A steals B1
     setStatusText("5. C procesa A1. A (ocioso) roba B1 (FIFO de B). B (ocioso) se queda sin nada que robar.");
@@ -322,21 +321,16 @@ export const ThreadPoolSimulator = () => {
       const newWorkers = [...prev];
       const workerB = newWorkers[1];
       
-      // Worker C processes
-      const workerC = newWorkers[2];
-      if (workerC.queue && workerC.queue.length > 0) {
-        newWorkers[2] = {
-          ...workerC,
-          status: "working",
-          currentTask: { ...workerC.queue[workerC.queue.length - 1], state: "processing" },
-          queue: workerC.queue.slice(0, -1),
-        };
-      }
+      // Worker C continues processing the stolen task
+      newWorkers[2] = {
+        ...newWorkers[2],
+        status: "working",
+      };
 
-      // Worker A steals from B
+      // Worker A steals from B (FIFO - oldest from B)
       if (workerB.queue && workerB.queue.length > 0) {
-        const stolenTask = workerB.queue[0];
-        newWorkers[1].queue = workerB.queue.slice(1);
+        const stolenTask = workerB.queue[workerB.queue.length - 1];
+        newWorkers[1].queue = workerB.queue.slice(0, -1);
         newWorkers[0] = {
           ...newWorkers[0],
           status: "stealing",
