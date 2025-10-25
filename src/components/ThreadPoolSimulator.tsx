@@ -17,6 +17,12 @@ interface Worker {
   queue?: Task[];
 }
 
+interface BlockingWorker {
+  id: number;
+  status: "idle" | "working" | "blocked";
+  queue: Task[];
+}
+
 export const ThreadPoolSimulator = () => {
   const [mode, setMode] = useState<"threadpool" | "forkjoin">("threadpool");
   const [isRunning, setIsRunning] = useState(false);
@@ -32,6 +38,13 @@ export const ThreadPoolSimulator = () => {
     { id: 2, status: "working", currentTask: null, queue: [] },
     { id: 3, status: "idle", currentTask: null, queue: [] },
   ]);
+  const [blockingWorkers, setBlockingWorkers] = useState<BlockingWorker[]>([
+    { id: 1, status: "working", queue: [] },
+    { id: 2, status: "working", queue: [] },
+    { id: 3, status: "working", queue: [] },
+  ]);
+  const [showDeadlockWarning, setShowDeadlockWarning] = useState(false);
+  const [blockingStatusText, setBlockingStatusText] = useState("");
 
   const createTask = (id: string, type: TaskType): Task => ({
     id,
@@ -57,6 +70,17 @@ export const ThreadPoolSimulator = () => {
       { id: 1, status: "working", currentTask: null, queue: [] },
       { id: 2, status: "working", currentTask: null, queue: [] },
       { id: 3, status: "idle", currentTask: null, queue: [] },
+    ]);
+  };
+
+  const resetBlockingAnimation = () => {
+    setIsRunning(false);
+    setBlockingStatusText("");
+    setShowDeadlockWarning(false);
+    setBlockingWorkers([
+      { id: 1, status: "working", queue: [] },
+      { id: 2, status: "working", queue: [] },
+      { id: 3, status: "working", queue: [] },
     ]);
   };
 
@@ -193,72 +217,272 @@ export const ThreadPoolSimulator = () => {
       { id: 2, status: "working", currentTask: null, queue: workerBTasks },
       { id: 3, status: "working", currentTask: null, queue: workerCTasks },
     ]);
-    setStatusText("10 tareas distribuidas: Worker A (4), Worker B (4), Worker C (2)");
+    setStatusText("1. Produciendo 10 tareas CPU-Bound. A (4), B (4), C (2).");
 
-    await new Promise((r) => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 2500));
 
-    // Workers process LIFO (rightmost task)
-    setStatusText("Worker A y B procesan última tarea (LIFO - más nueva)");
+    // Step 2: Process LIFO (A4, B4, C2)
+    setStatusText("2. Todos los Workers procesan sus tareas más recientes (LIFO): A4, B4, C2.");
     setFjpWorkers((prev) =>
       prev.map((w) => {
-        if (w.id === 1 && w.queue) {
+        if (w.queue && w.queue.length > 0) {
           const task = w.queue[w.queue.length - 1];
           return {
             ...w,
-            currentTask: { ...task, state: "processing" },
-            queue: w.queue.slice(0, -1),
-          };
-        }
-        if (w.id === 2 && w.queue) {
-          const task = w.queue[w.queue.length - 1];
-          return {
-            ...w,
+            status: "working",
             currentTask: { ...task, state: "processing" },
             queue: w.queue.slice(0, -1),
           };
         }
         return w;
       })
+    );
+
+    await new Promise((r) => setTimeout(r, 2000));
+
+    // Clear current tasks
+    setFjpWorkers((prev) => prev.map((w) => ({ ...w, currentTask: null })));
+    await new Promise((r) => setTimeout(r, 500));
+
+    // Step 3: Process LIFO again (A3, B3, C1)
+    setStatusText("3. Procesando LIFO de nuevo: A3, B3, C1. Worker C quedará ocioso.");
+    setFjpWorkers((prev) =>
+      prev.map((w) => {
+        if (w.queue && w.queue.length > 0) {
+          const task = w.queue[w.queue.length - 1];
+          return {
+            ...w,
+            status: "working",
+            currentTask: { ...task, state: "processing" },
+            queue: w.queue.slice(0, -1),
+          };
+        }
+        return w;
+      })
+    );
+
+    await new Promise((r) => setTimeout(r, 2000));
+
+    // Worker C becomes idle
+    setFjpWorkers((prev) =>
+      prev.map((w) => (w.id === 3 ? { ...w, status: "idle", currentTask: null } : w))
     );
 
     await new Promise((r) => setTimeout(r, 2500));
 
-    // Worker C processes its tasks faster
-    setStatusText("Worker C procesa sus 2 tareas rápidamente");
-    setFjpWorkers((prev) =>
-      prev.map((w) => {
-        if (w.id === 3) {
-          return { ...w, queue: [], currentTask: null, status: "idle" };
-        }
-        return w;
-      })
-    );
-
-    await new Promise((r) => setTimeout(r, 2000));
-
-    // Worker C steals from Worker A (FIFO - oldest task)
-    setStatusText("Worker C roba la tarea más antigua (FIFO) de Worker A");
+    // Step 4: Worker C steals from A, A and B process LIFO
+    setStatusText("4. Worker C (ocioso) busca trabajo. A y B procesan LIFO (A2, B2).");
+    
     setFjpWorkers((prev) => {
       const newWorkers = [...prev];
       const workerA = newWorkers[0];
+      
+      // Worker A and B process their LIFO
+      newWorkers[0] = {
+        ...workerA,
+        currentTask: workerA.queue && workerA.queue.length > 0 
+          ? { ...workerA.queue[workerA.queue.length - 1], state: "processing" } 
+          : null,
+        queue: workerA.queue ? workerA.queue.slice(0, -1) : [],
+      };
+
+      const workerB = newWorkers[1];
+      newWorkers[1] = {
+        ...workerB,
+        currentTask: workerB.queue && workerB.queue.length > 0
+          ? { ...workerB.queue[workerB.queue.length - 1], state: "processing" }
+          : null,
+        queue: workerB.queue ? workerB.queue.slice(0, -1) : [],
+      };
+
+      // Worker C steals from A (FIFO - oldest)
       if (workerA.queue && workerA.queue.length > 0) {
         const stolenTask = workerA.queue[0];
-        workerA.queue = workerA.queue.slice(1);
+        newWorkers[0].queue = workerA.queue.slice(1);
         newWorkers[2] = {
           ...newWorkers[2],
           status: "stealing",
           currentTask: { ...stolenTask, state: "processing" },
         };
       }
+      
       return newWorkers;
     });
 
     await new Promise((r) => setTimeout(r, 2500));
 
-    setStatusText("Animación completada - Work Stealing balancea la carga en tareas CPU");
+    // Clear current tasks
+    setFjpWorkers((prev) => prev.map((w) => ({ ...w, currentTask: null })));
+    await new Promise((r) => setTimeout(r, 500));
+
+    // Step 5: C processes A1, A steals B1
+    setStatusText("5. C procesa A1. A (ocioso) roba B1 (FIFO de B). B (ocioso) se queda sin nada que robar.");
+    
+    setFjpWorkers((prev) => {
+      const newWorkers = [...prev];
+      const workerB = newWorkers[1];
+      
+      // Worker C processes
+      const workerC = newWorkers[2];
+      if (workerC.queue && workerC.queue.length > 0) {
+        newWorkers[2] = {
+          ...workerC,
+          status: "working",
+          currentTask: { ...workerC.queue[workerC.queue.length - 1], state: "processing" },
+          queue: workerC.queue.slice(0, -1),
+        };
+      }
+
+      // Worker A steals from B
+      if (workerB.queue && workerB.queue.length > 0) {
+        const stolenTask = workerB.queue[0];
+        newWorkers[1].queue = workerB.queue.slice(1);
+        newWorkers[0] = {
+          ...newWorkers[0],
+          status: "stealing",
+          currentTask: { ...stolenTask, state: "processing" },
+        };
+      }
+
+      // Worker B becomes idle
+      newWorkers[1] = {
+        ...newWorkers[1],
+        status: "idle",
+        currentTask: null,
+      };
+      
+      return newWorkers;
+    });
+
+    await new Promise((r) => setTimeout(r, 2500));
+
+    // Step 6: Worker A processes B1
+    setStatusText("6. Worker A procesa B1 (robada). Todas las colas están vacías.");
+    await new Promise((r) => setTimeout(r, 2000));
+
+    setStatusText("✅ Animación completada. Se demostró LIFO (local) y FIFO (robo).");
     setFjpWorkers((prev) =>
       prev.map((w) => ({ ...w, status: "idle", currentTask: null, queue: [] }))
     );
+    setIsRunning(false);
+  };
+
+  const startBlockingAnimation = async () => {
+    setIsRunning(true);
+    resetBlockingAnimation();
+
+    // Create all blocking tasks
+    const blockingTasks = [
+      // Worker A tasks
+      { id: 'A1_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 1 },
+      { id: 'A2_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 1 },
+      { id: 'A3_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 1 },
+      { id: 'A4_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 1 },
+      { id: 'A5_IO', type: 'io' as TaskType, state: 'queue' as const, worker: 1 },
+      { id: 'A6_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 1 },
+      { id: 'A7_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 1 },
+      // Worker B tasks
+      { id: 'B1_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 2 },
+      { id: 'B2_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 2 },
+      { id: 'B3_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 2 },
+      { id: 'B4_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 2 },
+      { id: 'B5_IO', type: 'io' as TaskType, state: 'queue' as const, worker: 2 },
+      { id: 'B6_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 2 },
+      { id: 'B7_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 2 },
+      // Worker C tasks
+      { id: 'C1_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 3 },
+      { id: 'C2_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 3 },
+      { id: 'C3_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 3 },
+      { id: 'C4_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 3 },
+      { id: 'C5_IO', type: 'io' as TaskType, state: 'queue' as const, worker: 3 },
+      { id: 'C6_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 3 },
+      { id: 'C7_CPU', type: 'cpu' as TaskType, state: 'queue' as const, worker: 3 },
+    ];
+
+    // Distribute tasks to workers
+    const workerQueues = [
+      blockingTasks.filter(t => t.worker === 1).reverse(), // Reverse for LIFO display
+      blockingTasks.filter(t => t.worker === 2).reverse(),
+      blockingTasks.filter(t => t.worker === 3).reverse(),
+    ];
+
+    setBlockingWorkers([
+      { id: 1, status: "working", queue: workerQueues[0] },
+      { id: 2, status: "working", queue: workerQueues[1] },
+      { id: 3, status: "working", queue: workerQueues[2] },
+    ]);
+    setBlockingStatusText(`1. Tareas CPU e I/O entran al Pool (3 Workers). Total: ${blockingTasks.length} tareas.`);
+
+    await new Promise((r) => setTimeout(r, 2500));
+
+    // Step 2: Process 6 CPU tasks (A7, A6, B7, B6, C7, C6)
+    setBlockingStatusText("2. Los Workers ejecutan sus tareas más recientes (LIFO): A7, A6, B7, B6, C7, C6 (6 tareas CPU completadas).");
+    
+    // Remove 2 tasks from each queue
+    for (let i = 0; i < 2; i++) {
+      setBlockingWorkers((prev) =>
+        prev.map((w) => ({
+          ...w,
+          queue: w.queue.slice(0, -1),
+        }))
+      );
+      await new Promise((r) => setTimeout(r, 700));
+    }
+
+    await new Promise((r) => setTimeout(r, 1500));
+
+    // Step 3: All workers hit I/O tasks and block
+    setBlockingStatusText("3. Los 3 Workers golpean la siguiente tarea LIFO, que es I/O. ¡El Pool se BLOQUEA!");
+    setBlockingWorkers((prev) =>
+      prev.map((w) => ({
+        ...w,
+        status: "blocked",
+        queue: w.queue.map((task, idx) =>
+          idx === w.queue.length - 1 ? { ...task, state: "blocked" } : task
+        ),
+      }))
+    );
+
+    await new Promise((r) => setTimeout(r, 2500));
+
+    // Step 4: Show deadlock warning
+    setBlockingStatusText("4. DEADLOCK: Los 3 Workers están paralizados. Las 12 tareas CPU restantes (A1-A4, B1-B4, C1-C4) están esperando.");
+    setShowDeadlockWarning(true);
+
+    await new Promise((r) => setTimeout(r, 4000));
+
+    // Step 5: I/O completes
+    setBlockingStatusText("5. Simulación: Las tareas I/O finalmente terminan. El Pool se desbloquea.");
+    setShowDeadlockWarning(false);
+    setBlockingWorkers((prev) =>
+      prev.map((w) => ({
+        ...w,
+        status: "working",
+        queue: w.queue.slice(0, -1), // Remove the I/O task
+      }))
+    );
+
+    await new Promise((r) => setTimeout(r, 2500));
+
+    // Step 6: Process remaining tasks quickly
+    setBlockingStatusText("6. El Pool procesa las 12 tareas CPU restantes (A4, A3, A2, A1, etc.) en modo LIFO.");
+    
+    const processRemainingTasks = async () => {
+      while (blockingWorkers.some(w => w.queue.length > 0)) {
+        setBlockingWorkers((prev) =>
+          prev.map((w) => ({
+            ...w,
+            queue: w.queue.length > 0 ? w.queue.slice(0, -1) : [],
+            status: w.queue.length > 1 ? "working" : "idle",
+          }))
+        );
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    };
+
+    await processRemainingTasks();
+
+    setBlockingStatusText("✅ Animación completada. El bloqueo I/O paralizó el pool completo, dejando muchas tareas CPU esperando.");
     setIsRunning(false);
   };
 
@@ -268,6 +492,7 @@ export const ThreadPoolSimulator = () => {
       resetThreadPool();
     } else {
       resetForkJoinPool();
+      resetBlockingAnimation();
     }
   };
 
@@ -660,17 +885,148 @@ export const ThreadPoolSimulator = () => {
               </div>
             </Card>
 
-            {/* Risk Warning */}
-            <Card className="p-6 mt-8 bg-red-950/20 border-red-500">
-              <h3 className="text-xl font-bold text-red-500 border-b border-red-500 pb-2 mb-3">
+            {/* Blocking I/O Demonstration Section */}
+            <Card className="p-8 mt-8">
+              <h2 className="text-2xl font-bold text-red-500 border-b-2 border-red-500 pb-2 mb-6 font-mono">
                 🔴 Riesgos Críticos: Blocking I/O y el ForkJoinPool
-              </h3>
-              <p className="text-red-200 mb-4">
-                El uso del <code className="bg-card px-2 py-1 rounded">ForkJoinPool</code> para tareas que realizan operaciones de <strong>E/S bloqueantes (Blocking I/O)</strong>, como acceder a bases de datos, leer archivos o hacer llamadas de red síncronas, es un <strong>antipatrón</strong> y un error de diseño grave.
+              </h2>
+              <p className="mb-4">
+                El uso del <code className="bg-card px-2 py-1 rounded text-green-400">ForkJoinPool</code> para tareas que realizan operaciones de <strong>E/S bloqueantes (Blocking I/O)</strong>, como acceder a bases de datos, leer archivos o hacer llamadas de red síncronas, es un <strong>antipatrón</strong> y un error de diseño grave.
               </p>
-              <div className="bg-amber-950/50 border-l-4 border-red-500 p-4 rounded font-bold text-amber-200 text-center">
-                ⚠️ Si todas las threads del ForkJoinPool se bloquean esperando I/O, el pool completo se paraliza y no puede procesar más tareas.
+
+              <div className="bg-card/50 border-2 border-red-500 rounded-lg p-6 mb-6">
+                <h3 className="text-center text-red-500 font-bold text-xl mb-6">
+                  ⚠️ Demostración: Mezclando Tareas CPU con Tareas I/O Bloqueantes
+                </h3>
+
+                {/* Controls */}
+                <div className="text-center mb-6 p-4 bg-card/30 rounded-lg">
+                  <div className="flex gap-3 justify-center mb-3">
+                    <Button
+                      onClick={startBlockingAnimation}
+                      disabled={isRunning}
+                      className="bg-red-500 hover:bg-red-600 text-background font-mono"
+                    >
+                      ▶ Ver Antipatrón en Acción
+                    </Button>
+                    <Button
+                      onClick={resetBlockingAnimation}
+                      variant="outline"
+                      className="border-green-500 text-green-500 hover:bg-green-500/10 font-mono"
+                    >
+                      ↻ Reiniciar
+                    </Button>
+                  </div>
+                  <div className="bg-[#2a333d] border-l-4 border-blue-500 p-3 text-left text-[#a6c5e0] font-mono min-h-12">
+                    {blockingStatusText || "Presiona para ver qué ocurre cuando se bloquea el pool (Se asume un Pool de 3 Workers)"}
+                  </div>
+                </div>
+
+                {/* Blocking Workers */}
+                <div className="flex flex-col gap-5">
+                  {blockingWorkers.map((worker) => (
+                    <div
+                      key={worker.id}
+                      className={`bg-card/50 rounded-lg p-4 border transition-all ${
+                        worker.status === "blocked"
+                          ? "shadow-[0_0_20px_rgba(231,76,60,0.6)] bg-red-950/20 border-red-500"
+                          : "border-border"
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-3 pb-2 border-b border-border">
+                        <span className="font-bold text-lg font-mono">
+                          🔧 Worker {String.fromCharCode(64 + worker.id)}
+                        </span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-sm font-bold font-mono ${
+                            worker.status === "working"
+                              ? "bg-green-950/50 text-green-400"
+                              : worker.status === "blocked"
+                              ? "bg-red-950/50 text-red-400 animate-pulse"
+                              : "bg-blue-950/50 text-blue-400"
+                          }`}
+                        >
+                          {worker.status === "working"
+                            ? "Trabajando"
+                            : worker.status === "blocked"
+                            ? "Bloqueado"
+                            : "Ocioso"}
+                        </span>
+                      </div>
+
+                      {/* Worker Queue */}
+                      <div className="relative">
+                        <span className="absolute -top-3 left-4 bg-card px-2 text-xs text-muted-foreground font-bold z-10">
+                          LIFO (Newest) ← Cola → FIFO (Oldest)
+                        </span>
+                        <div className="min-h-20 bg-background border-2 border-dashed border-border rounded p-3 flex items-center overflow-x-auto">
+                          <div className="flex gap-2 flex-row-reverse w-full">
+                            {worker.queue.map((task) => (
+                              <div
+                                key={task.id}
+                                className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 ${
+                                  task.state === "blocked"
+                                    ? "bg-gradient-to-br from-red-500 to-red-700 animate-pulse"
+                                    : task.type === "cpu"
+                                    ? "bg-gradient-to-br from-blue-500 to-blue-700"
+                                    : "bg-gradient-to-br from-purple-500 to-purple-700"
+                                }`}
+                              >
+                                <span>{task.id.split('_')[0]}</span>
+                                <span className="text-[10px]">{task.type.toUpperCase()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Deadlock Warning */}
+                {showDeadlockWarning && (
+                  <div className="bg-amber-950/50 border-l-4 border-red-500 p-4 mt-6 rounded font-bold text-amber-200 text-center text-lg animate-pulse">
+                    ⛔ DEADLOCK: Todos los workers bloqueados por tareas I/O. Pool paralizado. ¡Hay 12 tareas CPU esperando!
+                  </div>
+                )}
+
+                {/* Legend */}
+                <div className="flex gap-6 justify-center mt-6 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-500 to-blue-700" />
+                    <span className="text-sm">Tarea CPU (rápida)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-500 to-purple-700" />
+                    <span className="text-sm">Tarea I/O (lenta/bloqueante)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded bg-gradient-to-br from-red-500 to-red-700" />
+                    <span className="text-sm">Worker Bloqueado</span>
+                  </div>
+                </div>
               </div>
+
+              {/* Risk Box */}
+              <Card className="p-6 bg-red-950/20 border-red-500">
+                <h3 className="text-xl font-bold text-red-500 border-b border-red-500 pb-2 mb-3">
+                  ¿Por Qué es un Antipatrón?
+                </h3>
+                <p className="text-red-200 mb-4">
+                  El problema reside en que el <code className="bg-card px-2 py-1 rounded">ForkJoinPool</code> está diseñado como un threadpool de <strong>tamaño fijo y limitado</strong> (igual al número de núcleos de CPU), y asume que las tareas son <strong>CPU-bound</strong> (limitadas por la velocidad de la CPU).
+                </p>
+                <ol className="list-decimal ml-6 space-y-3 text-red-200">
+                  <li>
+                    <strong>Falta de Compensación:</strong> Cuando una tarea de I/O bloqueante (ej. una llamada a una API externa) se ejecuta, el thread trabajador del Pool se detiene por completo y espera el resultado. A diferencia de otros Pools, el <code className="bg-card px-1 rounded">ForkJoinPool</code> <strong>no compensa</strong> automáticamente creando un nuevo thread de reemplazo.
+                  </li>
+                  <li>
+                    <strong>Deadlock (Interbloqueo) Potencial:</strong> Si todas las threads del pool se bloquean simultáneamente esperando respuestas de I/O, el pool queda completamente paralizado.
+                  </li>
+                </ol>
+                <p className="text-red-200 mt-4">
+                  <strong>En resumen:</strong> Estás usando un recurso escaso (los threads optimizados para CPU) y le estás ordenando sentarse a esperar a un recurso lento (I/O), lo que paraliza a todos los demás.
+                </p>
+              </Card>
             </Card>
           </div>
         )}
