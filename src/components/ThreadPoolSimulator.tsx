@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -47,15 +47,18 @@ export const ThreadPoolSimulator = () => {
   const [showDeadlockWarning, setShowDeadlockWarning] = useState(false);
   const [blockingStatusText, setBlockingStatusText] = useState("");
 
+  // Refs to control pause and running across awaits
+  const isPausedRef = useRef(false);
+  const isRunningRef = useRef(false);
+  useEffect(() => { isPausedRef.current = isPaused; }, [isPaused]);
+  useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
+
   // Pause helper function
   const waitOrPause = async (ms: number) => {
     const startTime = Date.now();
     while (Date.now() - startTime < ms) {
-      if (isPaused) {
-        await new Promise((r) => setTimeout(r, 100));
-      } else {
-        await new Promise((r) => setTimeout(r, 50));
-      }
+      if (!isRunningRef.current) return;
+      await new Promise((r) => setTimeout(r, isPausedRef.current ? 120 : 40));
     }
   };
 
@@ -67,6 +70,7 @@ export const ThreadPoolSimulator = () => {
 
   const resetThreadPool = () => {
     setIsRunning(false);
+    setIsPaused(false);
     setStatusText("");
     setSharedQueue([]);
     setWorkers([
@@ -78,6 +82,7 @@ export const ThreadPoolSimulator = () => {
 
   const resetForkJoinPool = () => {
     setIsRunning(false);
+    setIsPaused(false);
     setStatusText("");
     setFjpWorkers([
       { id: 1, status: "working", currentTask: null, queue: [] },
@@ -88,6 +93,7 @@ export const ThreadPoolSimulator = () => {
 
   const resetBlockingAnimation = () => {
     setIsRunning(false);
+    setIsPaused(false);
     setBlockingStatusText("");
     setShowDeadlockWarning(false);
     setBlockingWorkers([
@@ -115,6 +121,7 @@ export const ThreadPoolSimulator = () => {
     setStatusText("Cola compartida creada con 6 tareas (FIFO)");
 
     await waitOrPause(2000);
+    if (!isRunningRef.current) return;
 
     // Worker 1 takes T1 (CPU)
     setStatusText("Worker 1 toma T1 (CPU) de la cola compartida");
@@ -128,6 +135,7 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(2000);
+    if (!isRunningRef.current) return;
 
     // Worker 2 takes T2 (I/O) and blocks
     setStatusText("Worker 2 toma T2 (I/O) - SE BLOQUEA esperando respuesta");
@@ -141,6 +149,7 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(2000);
+    if (!isRunningRef.current) return;
 
     // Worker 3 takes T3 (CPU)
     setStatusText("Worker 3 toma T3 (CPU) mientras Worker 2 sigue bloqueado");
@@ -154,6 +163,7 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(2500);
+    if (!isRunningRef.current) return;
 
     // Worker 1 finishes and takes T4
     setStatusText("Worker 1 termina T1 y toma T4 (CPU) de la cola");
@@ -167,6 +177,7 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(2500);
+    if (!isRunningRef.current) return;
 
     // Worker 2 unblocks
     setStatusText("Worker 2 recibe respuesta I/O y termina T2");
@@ -175,6 +186,7 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(1500);
+    if (!isRunningRef.current) return;
 
     // Worker 2 takes T5 (I/O)
     setStatusText("Worker 2 toma T5 (I/O) - SE BLOQUEA nuevamente");
@@ -188,6 +200,7 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(2500);
+    if (!isRunningRef.current) return;
 
     // Worker 3 finishes and takes T6
     setStatusText("Worker 3 termina T3 y toma T6 (CPU)");
@@ -201,6 +214,7 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(2500);
+    if (!isRunningRef.current) return;
 
     setStatusText("Animación completada - El pool maneja bien tareas I/O bloqueantes");
     setWorkers((prev) => prev.map((w) => ({ ...w, status: "idle", currentTask: null })));
@@ -236,6 +250,7 @@ export const ThreadPoolSimulator = () => {
     setStatusText("1. Produciendo 10 tareas CPU-Bound. A (4), B (4), C (2).");
 
     await waitOrPause(2500);
+    if (!isRunningRef.current) return;
 
     // Step 2: Process LIFO (A4, B4, C2)
     setStatusText("2. Todos los Workers procesan sus tareas más recientes (LIFO): A4, B4, C2.");
@@ -255,10 +270,12 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(2000);
+    if (!isRunningRef.current) return;
 
     // Clear current tasks
     setFjpWorkers((prev) => prev.map((w) => ({ ...w, currentTask: null })));
     await waitOrPause(500);
+    if (!isRunningRef.current) return;
 
     // Step 3: Process LIFO again (A3, B3, C1)
     setStatusText("3. Procesando LIFO de nuevo: A3, B3, C1. Worker C quedará ocioso.");
@@ -278,6 +295,7 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(2000);
+    if (!isRunningRef.current) return;
 
     // Worker C becomes idle
     setFjpWorkers((prev) =>
@@ -285,6 +303,7 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(2500);
+    if (!isRunningRef.current) return;
 
     // Step 4: Worker C steals from A, A and B process LIFO
     setStatusText("4. Worker C (ocioso) busca trabajo. A y B procesan LIFO (A2, B2).");
@@ -327,6 +346,7 @@ export const ThreadPoolSimulator = () => {
     });
 
     await waitOrPause(2500);
+    if (!isRunningRef.current) return;
 
     // Continúa el procesamiento sin limpiar tareas para mantener la robada en C
 
@@ -365,10 +385,12 @@ export const ThreadPoolSimulator = () => {
     });
 
     await waitOrPause(2500);
+    if (!isRunningRef.current) return;
 
     // Step 6: Worker A processes B1
     setStatusText("6. Worker A procesa B1 (robada). Todas las colas están vacías.");
     await waitOrPause(2000);
+    if (!isRunningRef.current) return;
 
     setStatusText("✅ Animación completada. Se demostró LIFO (local) y FIFO (robo).");
     setFjpWorkers((prev) =>
@@ -426,6 +448,7 @@ export const ThreadPoolSimulator = () => {
     setBlockingStatusText(`1. Tareas CPU e I/O entran al Pool (3 Workers). Total: ${blockingTasks.length} tareas.`);
 
     await waitOrPause(2500);
+    if (!isRunningRef.current) return;
 
     // Step 2: Process 6 CPU tasks (A7, A6, B7, B6, C7, C6)
     setBlockingStatusText("2. Los Workers ejecutan sus tareas más recientes (LIFO): A7, A6, B7, B6, C7, C6 (6 tareas CPU completadas).");
@@ -435,13 +458,15 @@ export const ThreadPoolSimulator = () => {
       setBlockingWorkers((prev) =>
         prev.map((w) => ({
           ...w,
-          queue: w.queue.slice(0, -1),
+          queue: w.queue.slice(1),
         }))
       );
       await waitOrPause(700);
+      if (!isRunningRef.current) return;
     }
 
     await waitOrPause(1500);
+    if (!isRunningRef.current) return;
 
     // Step 3: All workers hit I/O tasks and block
     setBlockingStatusText("3. Los 3 Workers golpean la siguiente tarea LIFO, que es I/O. ¡El Pool se BLOQUEA!");
@@ -456,12 +481,14 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(2500);
+    if (!isRunningRef.current) return;
 
     // Step 4: Show deadlock warning
     setBlockingStatusText("4. DEADLOCK: Los 3 Workers están paralizados. Las 12 tareas CPU restantes (A1-A4, B1-B4, C1-C4) están esperando.");
     setShowDeadlockWarning(true);
 
     await waitOrPause(4000);
+    if (!isRunningRef.current) return;
 
     // Step 5: I/O completes
     setBlockingStatusText("5. Simulación: Las tareas I/O finalmente terminan. El Pool se desbloquea.");
@@ -479,6 +506,7 @@ export const ThreadPoolSimulator = () => {
     );
 
     await waitOrPause(2500);
+    if (!isRunningRef.current) return;
 
     // Step 6: Process remaining tasks quickly
     setBlockingStatusText("6. El Pool procesa las 12 tareas CPU restantes (A4, A3, A2, A1, etc.) en modo LIFO.");
