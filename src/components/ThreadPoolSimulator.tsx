@@ -69,6 +69,8 @@ export const ThreadPoolSimulator = () => {
   });
 
   const resetThreadPool = () => {
+    isRunningRef.current = false;
+    isPausedRef.current = false;
     setIsRunning(false);
     setIsPaused(false);
     setStatusText("");
@@ -81,6 +83,8 @@ export const ThreadPoolSimulator = () => {
   };
 
   const resetForkJoinPool = () => {
+    isRunningRef.current = false;
+    isPausedRef.current = false;
     setIsRunning(false);
     setIsPaused(false);
     setStatusText("");
@@ -92,6 +96,8 @@ export const ThreadPoolSimulator = () => {
   };
 
   const resetBlockingAnimation = () => {
+    isRunningRef.current = false;
+    isPausedRef.current = false;
     setIsRunning(false);
     setIsPaused(false);
     setBlockingStatusText("");
@@ -104,9 +110,11 @@ export const ThreadPoolSimulator = () => {
   };
 
   const startThreadPoolAnimation = async () => {
+    resetThreadPool();
+    isRunningRef.current = true;
+    isPausedRef.current = false;
     setIsRunning(true);
     setIsPaused(false);
-    resetThreadPool();
 
     // Initialize shared queue with tasks
     const tasks: Task[] = [
@@ -220,9 +228,13 @@ export const ThreadPoolSimulator = () => {
     setWorkers((prev) => prev.map((w) => ({ ...w, status: "idle", currentTask: null })));
     setIsRunning(false);
     setIsPaused(false);
+    isRunningRef.current = false;
+    isPausedRef.current = false;
   };
 
   const startForkJoinAnimation = async () => {
+    isRunningRef.current = true;
+    isPausedRef.current = false;
     setIsRunning(true);
     setIsPaused(false);
     resetForkJoinPool();
@@ -398,9 +410,13 @@ export const ThreadPoolSimulator = () => {
     );
     setIsRunning(false);
     setIsPaused(false);
+    isRunningRef.current = false;
+    isPausedRef.current = false;
   };
 
   const startBlockingAnimation = async () => {
+    isRunningRef.current = true;
+    isPausedRef.current = false;
     setIsRunning(true);
     setIsPaused(false);
     resetBlockingAnimation();
@@ -539,6 +555,8 @@ export const ThreadPoolSimulator = () => {
     setBlockingStatusText("✅ Animación completada. El bloqueo I/O paralizó el pool completo, dejando muchas tareas CPU esperando.");
     setIsRunning(false);
     setIsPaused(false);
+    isRunningRef.current = false;
+    isPausedRef.current = false;
   };
 
   const handleToggle = () => {
@@ -680,7 +698,13 @@ export const ThreadPoolSimulator = () => {
                     ▶ Iniciar Animación
                   </Button>
                   <Button
-                    onClick={() => setIsPaused(!isPaused)}
+                    onClick={() => {
+                      setIsPaused((prev) => {
+                        const next = !prev;
+                        isPausedRef.current = next;
+                        return next;
+                      });
+                    }}
                     disabled={!isRunning}
                     variant="outline"
                     className="border-orange-500 text-orange-500 hover:bg-orange-500/10 font-mono"
@@ -834,7 +858,13 @@ export const ThreadPoolSimulator = () => {
                     ▶ Iniciar Animación
                   </Button>
                   <Button
-                    onClick={() => setIsPaused(!isPaused)}
+                    onClick={() => {
+                      setIsPaused((prev) => {
+                        const next = !prev;
+                        isPausedRef.current = next;
+                        return next;
+                      });
+                    }}
                     disabled={!isRunning}
                     variant="outline"
                     className="border-green-500 text-green-500 hover:bg-green-500/10 font-mono"
@@ -981,7 +1011,13 @@ export const ThreadPoolSimulator = () => {
                       ▶ Ver Antipatrón en Acción
                     </Button>
                     <Button
-                      onClick={() => setIsPaused(!isPaused)}
+                      onClick={() => {
+                        setIsPaused((prev) => {
+                          const next = !prev;
+                          isPausedRef.current = next;
+                          return next;
+                        });
+                      }}
                       disabled={!isRunning}
                       variant="outline"
                       className="border-red-500 text-red-500 hover:bg-red-500/10 font-mono"
