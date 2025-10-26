@@ -55,10 +55,16 @@ export const ThreadPoolSimulator = () => {
 
   // Pause helper function
   const waitOrPause = async (ms: number) => {
-    const startTime = Date.now();
-    while (Date.now() - startTime < ms) {
+    let remaining = ms;
+    while (remaining > 0) {
       if (!isRunningRef.current) return;
-      await new Promise((r) => setTimeout(r, isPausedRef.current ? 120 : 40));
+      while (isPausedRef.current) {
+        if (!isRunningRef.current) return;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      const delay = Math.min(remaining, 50);
+      await new Promise((r) => setTimeout(r, delay));
+      remaining -= delay;
     }
   };
 
@@ -116,128 +122,115 @@ export const ThreadPoolSimulator = () => {
     setIsRunning(true);
     setIsPaused(false);
 
-    // Initialize shared queue with tasks
     const tasks: Task[] = [
       createTask("T1", "cpu"),
-      createTask("T2", "io"),
-      createTask("T3", "cpu"),
+      createTask("T2", "cpu"),
+      createTask("T3", "io"),
       createTask("T4", "cpu"),
       createTask("T5", "io"),
       createTask("T6", "cpu"),
+      createTask("T7", "cpu"),
+      createTask("T8", "io"),
+      createTask("T9", "cpu"),
+      createTask("T10", "cpu"),
     ];
     setSharedQueue(tasks);
-    setStatusText("Cola compartida creada con 6 tareas (FIFO)");
-
-    await waitOrPause(2000);
-    if (!isRunningRef.current) return;
-
-    // Worker 1 takes T1 (CPU)
-    setStatusText("Worker 1 toma T1 (CPU) de la cola compartida");
-    setSharedQueue((prev) => prev.slice(1));
-    setWorkers((prev) =>
-      prev.map((w) =>
-        w.id === 1
-          ? { ...w, status: "working", currentTask: { ...tasks[0], state: "processing" } }
-          : w
-      )
-    );
-
-    await waitOrPause(2000);
-    if (!isRunningRef.current) return;
-
-    // Worker 2 takes T2 (I/O) and blocks
-    setStatusText("Worker 2 toma T2 (I/O) - SE BLOQUEA esperando respuesta");
-    setSharedQueue((prev) => prev.slice(1));
-    setWorkers((prev) =>
-      prev.map((w) =>
-        w.id === 2
-          ? { ...w, status: "blocked", currentTask: { ...tasks[1], state: "blocked" } }
-          : w
-      )
-    );
-
-    await waitOrPause(2000);
-    if (!isRunningRef.current) return;
-
-    // Worker 3 takes T3 (CPU)
-    setStatusText("Worker 3 toma T3 (CPU) mientras Worker 2 sigue bloqueado");
-    setSharedQueue((prev) => prev.slice(1));
-    setWorkers((prev) =>
-      prev.map((w) =>
-        w.id === 3
-          ? { ...w, status: "working", currentTask: { ...tasks[2], state: "processing" } }
-          : w
-      )
-    );
-
-    await waitOrPause(2500);
-    if (!isRunningRef.current) return;
-
-    // Worker 1 finishes and takes T4
-    setStatusText("Worker 1 termina T1 y toma T4 (CPU) de la cola");
-    setSharedQueue((prev) => prev.slice(1));
-    setWorkers((prev) =>
-      prev.map((w) =>
-        w.id === 1
-          ? { ...w, status: "working", currentTask: { ...tasks[3], state: "processing" } }
-          : w
-      )
-    );
-
-    await waitOrPause(2500);
-    if (!isRunningRef.current) return;
-
-    // Worker 2 unblocks
-    setStatusText("Worker 2 recibe respuesta I/O y termina T2");
-    setWorkers((prev) =>
-      prev.map((w) => (w.id === 2 ? { ...w, status: "idle", currentTask: null } : w))
-    );
+    setStatusText(`Cola compartida creada con ${tasks.length} tareas (FIFO)`);
 
     await waitOrPause(1500);
     if (!isRunningRef.current) return;
 
-    // Worker 2 takes T5 (I/O)
-    setStatusText("Worker 2 toma T5 (I/O) - SE BLOQUEA nuevamente");
-    setSharedQueue((prev) => prev.slice(1));
+    // Workers take initial tasks
+    setStatusText("Workers 1 y 2 toman tareas CPU (rápidas). Worker 3 toma una tarea I/O (lenta) y se bloquea.");
+    setSharedQueue((prev) => prev.slice(3));
     setWorkers((prev) =>
-      prev.map((w) =>
-        w.id === 2
-          ? { ...w, status: "blocked", currentTask: { ...tasks[4], state: "blocked" } }
-          : w
-      )
+      prev.map((w, i) => ({
+        ...w,
+        status: tasks[i].type === "cpu" ? "working" : "blocked",
+        currentTask: { ...tasks[i], state: tasks[i].type === "cpu" ? "processing" : "blocked" },
+      }))
     );
 
-    await waitOrPause(2500);
+    await waitOrPause(1000); // CPU tasks are fast
     if (!isRunningRef.current) return;
 
-    // Worker 3 finishes and takes T6
-    setStatusText("Worker 3 termina T3 y toma T6 (CPU)");
+    // CPU workers finish and take new tasks
+    setStatusText("Workers 1 y 2 terminan sus tareas CPU y toman las siguientes.");
+    setWorkers((prev) => {
+      const newWorkers = [...prev];
+      newWorkers[0] = { ...newWorkers[0], status: "idle", currentTask: null };
+      newWorkers[1] = { ...newWorkers[1], status: "idle", currentTask: null };
+      return newWorkers;
+    });
+    await waitOrPause(500);
+    if (!isRunningRef.current) return;
+
+    setSharedQueue((prev) => prev.slice(2));
+    setWorkers((prev) => {
+      const newWorkers = [...prev];
+      newWorkers[0] = { ...newWorkers[0], status: "working", currentTask: { ...tasks[3], state: "processing" } };
+      newWorkers[1] = { ...newWorkers[1], status: "blocked", currentTask: { ...tasks[4], state: "blocked" } };
+      return newWorkers;
+    });
+    setStatusText("Worker 1 toma T4 (CPU). Worker 2 toma T5 (I/O) y también se bloquea.");
+
+    await waitOrPause(1000); // CPU task is fast
+    if (!isRunningRef.current) return;
+
+    // Worker 1 finishes and takes another CPU task
+    setStatusText("Worker 1 termina T4 y toma T6 (CPU).");
+    setWorkers((prev) => prev.map(w => w.id === 1 ? { ...w, status: "idle", currentTask: null } : w));
+    await waitOrPause(500);
+    if (!isRunningRef.current) return;
+
     setSharedQueue((prev) => prev.slice(1));
-    setWorkers((prev) =>
-      prev.map((w) =>
-        w.id === 3
-          ? { ...w, status: "working", currentTask: { ...tasks[5], state: "processing" } }
-          : w
-      )
-    );
+    setWorkers((prev) => prev.map(w => w.id === 1 ? { ...w, status: "working", currentTask: { ...tasks[5], state: "processing" } } : w));
 
-    await waitOrPause(2500);
+    await waitOrPause(1000); // CPU task is fast
     if (!isRunningRef.current) return;
 
-    setStatusText("Animación completada - El pool maneja bien tareas I/O bloqueantes");
-    setWorkers((prev) => prev.map((w) => ({ ...w, status: "idle", currentTask: null })));
-    setIsRunning(false);
-    setIsPaused(false);
-    isRunningRef.current = false;
-    isPausedRef.current = false;
+    // I/O task for Worker 3 finishes
+    setStatusText("Worker 3 finalmente termina su tarea I/O y queda libre.");
+    setWorkers((prev) => prev.map(w => w.id === 3 ? { ...w, status: "idle", currentTask: null } : w));
+
+    await waitOrPause(2000); // Wait to show idle state
+    if (!isRunningRef.current) return;
+
+    // All workers take remaining tasks
+    setStatusText("Workers libres toman las tareas restantes de la cola.");
+    setSharedQueue([]);
+    setWorkers((prev) => {
+      const newWorkers = [...prev];
+      newWorkers[0] = { ...newWorkers[0], status: "working", currentTask: { ...tasks[6], state: "processing" } };
+      newWorkers[2] = { ...newWorkers[2], status: "blocked", currentTask: { ...tasks[7], state: "blocked" } };
+      return newWorkers;
+    });
+    await waitOrPause(500);
+    if (!isRunningRef.current) return;
+    setWorkers((prev) => prev.map(w => w.id === 1 ? { ...w, status: "idle", currentTask: null } : w));
+    await waitOrPause(500);
+    if (!isRunningRef.current) return;
+    setWorkers((prev) => prev.map(w => w.id === 1 ? { ...w, status: "working", currentTask: { ...tasks[8], state: "processing" } } : w));
+    await waitOrPause(1000);
+    if (!isRunningRef.current) return;
+    setWorkers((prev) => prev.map(w => w.id === 1 ? { ...w, status: "idle", currentTask: null } : w));
+    await waitOrPause(500);
+    if (!isRunningRef.current) return;
+    setWorkers((prev) => prev.map(w => w.id === 1 ? { ...w, status: "working", currentTask: { ...tasks[9], state: "processing" } } : w));
+    await waitOrPause(1000);
+    if (!isRunningRef.current) return;
+
+
+    setStatusText("✅ Animación completada. Las tareas CPU se procesan rápido, las I/O bloquean a los workers pero el pool sigue trabajando.");
+    resetThreadPool();
   };
 
   const startForkJoinAnimation = async () => {
+    resetForkJoinPool();
     isRunningRef.current = true;
     isPausedRef.current = false;
     setIsRunning(true);
     setIsPaused(false);
-    resetForkJoinPool();
 
     // Initialize worker queues (newest-first for LIFO rendering)
     const workerATasks = [
@@ -415,11 +408,11 @@ export const ThreadPoolSimulator = () => {
   };
 
   const startBlockingAnimation = async () => {
+    resetBlockingAnimation();
     isRunningRef.current = true;
     isPausedRef.current = false;
     setIsRunning(true);
     setIsPaused(false);
-    resetBlockingAnimation();
 
     // Create all blocking tasks
     const blockingTasks = [
@@ -528,25 +521,23 @@ export const ThreadPoolSimulator = () => {
     setBlockingStatusText("6. El Pool procesa las 12 tareas CPU restantes (A4, A3, A2, A1, etc.) en modo LIFO.");
     
     const processRemainingTasks = async () => {
-      let any = true;
-      while (any) {
-        any = false;
-        setBlockingWorkers((prev) => {
-          const updated: BlockingWorker[] = prev.map((w) => {
+      for (let i = 0; i < 4; i++) { // There are 4 tasks remaining for each worker
+        if (!isRunningRef.current) return;
+        setBlockingStatusText(`6. El Pool procesa las tareas CPU restantes...`);
+        setBlockingWorkers((prev) =>
+          prev.map((w) => {
             if (w.queue.length > 0) {
-              any = true;
-              const newQueue = w.queue.slice(1); // remove LIFO (front)
+              const newQueue = w.queue.slice(1);
               return {
                 ...w,
                 queue: newQueue,
-                status: (newQueue.length > 0 ? "working" : "idle") as BlockingWorker["status"],
+                status: newQueue.length > 0 ? "working" : "idle",
               };
             }
-            return { ...w, status: "idle" as BlockingWorker["status"] };
-          });
-          return updated;
-        });
-        if (any) await waitOrPause(500);
+            return w;
+          })
+        );
+        await waitOrPause(1000);
       }
     };
 
@@ -672,7 +663,7 @@ export const ThreadPoolSimulator = () => {
                       {sharedQueue.map((task) => (
                         <div
                           key={task.id}
-                          className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 transition-all duration-300 ${
+                          className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 transition-all duration-500 ${
                             task.type === "cpu"
                               ? "bg-gradient-to-br from-blue-500 to-blue-700"
                               : "bg-gradient-to-br from-purple-500 to-purple-700"
@@ -743,7 +734,7 @@ export const ThreadPoolSimulator = () => {
                         worker.status === "working"
                           ? "bg-green-950/50 text-green-400"
                           : worker.status === "blocked"
-                          ? "bg-red-950/50 text-red-400 animate-pulse"
+                          ? "bg-red-950/50 text-red-400 animate-slow-pulse"
                           : "bg-blue-950/50 text-blue-400"
                       }`}
                     >
@@ -758,9 +749,9 @@ export const ThreadPoolSimulator = () => {
                         <div
                           className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg ${
                             worker.currentTask.state === "blocked"
-                              ? "bg-gradient-to-br from-red-500 to-red-700 animate-pulse"
+                              ? "bg-gradient-to-br from-red-500 to-red-700 animate-slow-pulse"
                               : worker.currentTask.type === "cpu"
-                              ? "bg-gradient-to-br from-green-500 to-green-700 animate-pulse"
+                              ? "bg-gradient-to-br from-green-500 to-green-700 animate-slow-pulse"
                               : "bg-gradient-to-br from-purple-500 to-purple-700"
                           }`}
                         >
@@ -906,7 +897,7 @@ export const ThreadPoolSimulator = () => {
                           worker.status === "working"
                             ? "bg-green-950/50 text-green-400"
                             : worker.status === "stealing"
-                            ? "bg-blue-950/50 text-blue-400 animate-pulse"
+                            ? "bg-blue-950/50 text-blue-400 animate-slow-pulse"
                             : "bg-blue-950/50 text-blue-400"
                         }`}
                       >
@@ -926,7 +917,7 @@ export const ThreadPoolSimulator = () => {
                      <div className="min-h-20 bg-background border-2 border-dashed border-border rounded p-3 flex items-center overflow-x-auto">
                         <div className="flex gap-2 flex-row-reverse w-full">
                           {worker.currentTask && (
-                            <div className="w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 bg-gradient-to-br from-green-500 to-green-700 animate-pulse scale-110 transition-all duration-300">
+                            <div className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 scale-110 transition-all duration-500 ${worker.status === 'stealing' ? 'bg-gradient-to-br from-orange-500 to-orange-700' : 'bg-gradient-to-br from-green-500 to-green-700'} animate-slow-pulse`}>
                               <span>{worker.currentTask.id}</span>
                               <span className="text-[10px]">CPU</span>
                             </div>
@@ -934,7 +925,7 @@ export const ThreadPoolSimulator = () => {
                           {worker.queue?.map((task) => (
                             <div
                               key={task.id}
-                              className="w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700 transition-all duration-300"
+                              className="w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700 transition-all duration-500"
                             >
                               <span>{task.id}</span>
                               <span className="text-[10px]">CPU</span>
@@ -954,11 +945,11 @@ export const ThreadPoolSimulator = () => {
                   <span className="text-sm">Tarea CPU</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-gradient-to-br from-green-500 to-green-700" />
+                  <div className="w-6 h-6 rounded bg-gradient-to-br from-orange-500 to-orange-700" />
                   <span className="text-sm">Tarea Robada (FIFO)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-gradient-to-br from-green-500 to-green-700 animate-pulse" />
+                  <div className="w-6 h-6 rounded bg-gradient-to-br from-green-500 to-green-700 animate-slow-pulse" />
                   <span className="text-sm">Procesando (LIFO Local)</span>
                 </div>
               </div>
@@ -1057,7 +1048,7 @@ export const ThreadPoolSimulator = () => {
                             worker.status === "working"
                               ? "bg-green-950/50 text-green-400"
                               : worker.status === "blocked"
-                              ? "bg-red-950/50 text-red-400 animate-pulse"
+                              ? "bg-red-950/50 text-red-400 animate-slow-pulse"
                               : "bg-blue-950/50 text-blue-400"
                           }`}
                         >
@@ -1076,12 +1067,14 @@ export const ThreadPoolSimulator = () => {
                         </span>
                          <div className="min-h-20 bg-background border-2 border-dashed border-border rounded p-3 flex items-center overflow-x-auto">
                           <div className="flex gap-2 flex-row-reverse w-full">
-                            {worker.queue.map((task) => (
+                            {worker.queue.map((task, index) => (
                               <div
                                 key={task.id}
-                                className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 transition-all duration-300 ${
+                                className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 transition-all duration-500 ${
                                   task.state === "blocked"
-                                    ? "bg-gradient-to-br from-red-500 to-red-700 animate-pulse"
+                                    ? "bg-gradient-to-br from-red-500 to-red-700 animate-slow-pulse"
+                                    : (index === 0 && worker.status === 'working')
+                                    ? "bg-gradient-to-br from-green-500 to-green-700 animate-slow-pulse"
                                     : task.type === "cpu"
                                     ? "bg-gradient-to-br from-blue-500 to-blue-700"
                                     : "bg-gradient-to-br from-purple-500 to-purple-700"
@@ -1100,7 +1093,7 @@ export const ThreadPoolSimulator = () => {
 
                 {/* Deadlock Warning */}
                 {showDeadlockWarning && (
-                  <div className="bg-amber-950/50 border-l-4 border-red-500 p-4 mt-6 rounded font-bold text-amber-200 text-center text-lg animate-pulse">
+                  <div className="bg-amber-950/50 border-l-4 border-red-500 p-4 mt-6 rounded font-bold text-amber-200 text-center text-lg animate-slow-pulse">
                     ⛔ DEADLOCK: Todos los workers bloqueados por tareas I/O. Pool paralizado. ¡Hay 12 tareas CPU esperando!
                   </div>
                 )}

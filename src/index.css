@@ -116,4 +116,8 @@ All colors MUST be HSL.
   .card-shadow {
     box-shadow: var(--card-shadow);
   }
+
+  .animate-slow-pulse {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
 }
