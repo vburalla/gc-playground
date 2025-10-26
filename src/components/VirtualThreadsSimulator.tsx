@@ -51,7 +51,7 @@ const MAX_CARRIER_THREADS = 2;
 const IO_BLOCK_DURATION = 5000;
 const CPU_TASK_DURATION = 3000;
 const VIRTUAL_THREAD_MOUNT_DELAY = 2000;
-const LEGEND_DURATION = 1800;
+const LEGEND_DURATION = 3000;
 
 const Legend = ({ text }: { text: string }) => (
     <motion.div
@@ -73,7 +73,7 @@ const VirtualLegendDisplay = ({ legends }: { legends: string[] }) => (
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5 }}
+                    transition={{ duration: 1.0 }}
                     className="bg-primary/90 text-primary-foreground p-2 rounded-md shadow-lg text-sm font-semibold"
                 >
                     {legend}
@@ -104,7 +104,7 @@ const PlatformThreadComponent = ({ thread }: { thread: PlatformThread }) => (
     layoutId={`platform-thread-${thread.id}`}
     initial={{ opacity: 0, scale: 0.8 }}
     animate={{ opacity: 1, scale: 1 }}
-    exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.5 } }}
+    exit={{ opacity: 0, scale: 0.8, transition: { duration: 1.0 } }}
     className="relative w-36 h-48 bg-card border rounded-lg p-2 flex flex-col items-center shadow-md"
   >
     <AnimatePresence>
@@ -122,7 +122,7 @@ const PlatformThreadComponent = ({ thread }: { thread: PlatformThread }) => (
         )}
         </AnimatePresence>
     </div>
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 0.3 } }} className="absolute -bottom-7 text-center">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 0.6 } }} className="absolute -bottom-7 text-center">
       <Badge variant={thread.task.type === "IO" ? "destructive" : "default"}>Task {thread.task.id} ({thread.task.type})</Badge>
     </motion.div>
   </motion.div>
@@ -154,7 +154,7 @@ const OSThreadComponent = ({ osThread, isCarrier = false }: { osThread: OSThread
     <motion.div layout animate={{
         borderColor: (osThread as OSThread).isBlocked ? "hsl(0, 72%, 51%)" : "hsl(var(--primary))",
         backgroundColor: (osThread as OSThread).isBlocked ? "hsla(0, 72%, 51%, 0.1)" : "hsla(var(--muted))"
-    }} transition={{ duration: 0.5 }}
+    }} transition={{ duration: 1.0 }}
         className={`relative w-36 h-48 border-2 border-dashed rounded-lg p-2 flex flex-col items-center justify-center shadow-inner bg-muted/30`}>
         <Badge variant="outline" className="text-[10px]">{isCarrier ? 'Carrier' : 'OS'} Thread {osThread.id}</Badge>
         <AnimatePresence>
@@ -175,7 +175,7 @@ const OSThreadComponent = ({ osThread, isCarrier = false }: { osThread: OSThread
 
 const ConnectingLine = ({ visible }: { visible: boolean }) => (
     <AnimatePresence>
-        {visible && <motion.div initial={{scaleX: 0}} animate={{scaleX: 1, transition: {duration: 0.5, delay: 0.5}}} exit={{scaleX: 0}} className="h-0.5 w-full bg-primary/70 origin-left" />}
+        {visible && <motion.div initial={{scaleX: 0}} animate={{scaleX: 1, transition: {duration: 1.0, delay: 0.5}}} exit={{scaleX: 0}} className="h-0.5 w-full bg-primary/70 origin-left" />}
     </AnimatePresence>
 )
 
@@ -233,15 +233,18 @@ export const VirtualThreadsSimulator = () => {
   // Platform state
   const [platformThreads, setPlatformThreads] = useState<PlatformThread[]>([]);
   const [osThreads, setOsThreads] = useState<OSThread[]>([]);
+  const osThreadsRef = useRef(osThreads);
+  useEffect(() => { osThreadsRef.current = osThreads; }, [osThreads]);
   const nextPlatformThreadId = useRef(1);
 
   // Virtual state
   const [virtualThreads, setVirtualThreads] = useState<VirtualThread[]>([]);
   const [carrierThreads, setCarrierThreads] = useState<CarrierThread[]>([]);
+  const carrierThreadsRef = useRef(carrierThreads);
+  useEffect(() => { carrierThreadsRef.current = carrierThreads; }, [carrierThreads]);
   const [carrierOsThreads, setCarrierOsThreads] = useState<OSThread[]>([]);
   const [virtualLegends, setVirtualLegends] = useState<string[]>([]);
   const nextVirtualThreadId = useRef(1);
-  const [processingVirtualThreadId, setProcessingVirtualThreadId] = useState<number | null>(null);
 
   const resetSimulation = () => {
     setTasks([]);
@@ -254,7 +257,6 @@ export const VirtualThreadsSimulator = () => {
     setVirtualLegends([]);
     nextVirtualThreadId.current = 1;
     nextTaskId.current = 1;
-    setProcessingVirtualThreadId(null);
   };
 
   useEffect(() => { resetSimulation(); }, [mode]);
@@ -295,7 +297,7 @@ export const VirtualThreadsSimulator = () => {
             }, 1000);
         }
     }
-  }, [tasks, osThreads, mode, nextPlatformThreadId.current]);
+  }, [tasks, mode, nextPlatformThreadId.current]);
 
 
   useEffect(() => {
@@ -312,73 +314,69 @@ export const VirtualThreadsSimulator = () => {
       }
 
       // 2. Mount virtual threads to carrier threads
-      if (processingVirtualThreadId === null) { // Only process one at a time
-        const mountableVThread = virtualThreads.find(vt =>
-          (vt.state === "NEW" || vt.state === "RUNNABLE") && vt.carrierId === null
-        );
-        const availableCarrier = carrierThreads.find(ct => ct.mountedVirtualThreadId === null);
+      const mountableVThread = virtualThreads.find(vt =>
+        (vt.state === "NEW" || vt.state === "RUNNABLE") && vt.carrierId === null && vt.task.type === "CPU"
+      ) || virtualThreads.find(vt =>
+        (vt.state === "NEW" || vt.state === "RUNNABLE") && vt.carrierId === null && vt.task.type === "IO"
+      );
+      const availableCarrier = carrierThreads.find(ct => ct.mountedVirtualThreadId === null);
 
-        if (mountableVThread && availableCarrier) {
-          setProcessingVirtualThreadId(mountableVThread.id); // Mark as processing
+      if (mountableVThread && availableCarrier) {
+        const wasRunnable = mountableVThread.state === 'RUNNABLE';
 
-          const wasRunnable = mountableVThread.state === 'RUNNABLE';
+        // Update virtual thread and carrier thread states
+        setVirtualThreads(prev => prev.map(vt =>
+          vt.id === mountableVThread.id ? { ...vt, state: "MOUNTED", carrierId: availableCarrier.id } : vt
+        ));
+        setCarrierThreads(prev => prev.map(ct =>
+          ct.id === availableCarrier.id ? { ...ct, mountedVirtualThreadId: mountableVThread.id } : ct
+        ));
 
-          // Update virtual thread and carrier thread states
-          setVirtualThreads(prev => prev.map(vt =>
-            vt.id === mountableVThread.id ? { ...vt, state: "MOUNTED", carrierId: availableCarrier.id } : vt
-          ));
-          setCarrierThreads(prev => prev.map(ct =>
-            ct.id === availableCarrier.id ? { ...ct, mountedVirtualThreadId: mountableVThread.id } : ct
-          ));
+        const mountLegend = wasRunnable
+          ? `Montando Tarea I/O ${mountableVThread.task.id} para finalizar`
+          : `Montando Tarea ${mountableVThread.task.id} (${mountableVThread.task.type})`;
+        setVirtualLegends(prev => [...prev, mountLegend]);
+        setTimeout(() => setVirtualLegends(prev => prev.filter(l => l !== mountLegend)), LEGEND_DURATION);
 
-          const mountLegend = wasRunnable
-            ? `Montando Tarea I/O ${mountableVThread.task.id} para finalizar`
-            : `Montando Tarea ${mountableVThread.task.id} (${mountableVThread.task.type})`;
-          setVirtualLegends(prev => [...prev, mountLegend]);
-          setTimeout(() => setVirtualLegends(prev => prev.filter(l => l !== mountLegend)), LEGEND_DURATION);
+        setTimeout((currentCarrierId) => {
+          if (mountableVThread.task.type === 'IO' && !wasRunnable) {
+            // I/O task: Unmount and save to Heap
+            const unmountLegend = `Tarea I/O ${mountableVThread.task.id} bloqueada. Desmontando y guardando en Heap.`;
+            setVirtualLegends(prev => [...prev, unmountLegend]);
+            setTimeout(() => setVirtualLegends(prev => prev.filter(l => l !== unmountLegend)), LEGEND_DURATION);
 
-          setTimeout(() => {
-            if (mountableVThread.task.type === 'IO' && !wasRunnable) {
-              // I/O task: Unmount and save to Heap
-              const unmountLegend = `Tarea I/O ${mountableVThread.task.id} bloqueada. Desmontando y guardando en Heap.`;
-              setVirtualLegends(prev => [...prev, unmountLegend]);
-              setTimeout(() => setVirtualLegends(prev => prev.filter(l => l !== unmountLegend)), LEGEND_DURATION);
+            setVirtualThreads(prev => prev.map(vt =>
+              vt.id === mountableVThread.id ? { ...vt, state: "UNMOUNTED", carrierId: null } : vt
+            ));
+            setCarrierThreads(prev => prev.map(ct =>
+              ct.id === currentCarrierId ? { ...ct, mountedVirtualThreadId: null } : ct
+            ));
 
+            setTimeout(() => {
+              const runnableLegend = `Tarea I/O ${mountableVThread.task.id} completada. Thread listo para re-montar.`;
+              setVirtualLegends(prev => [...prev, runnableLegend]);
+              setTimeout(() => setVirtualLegends(prev => prev.filter(l => l !== runnableLegend)), LEGEND_DURATION);
               setVirtualThreads(prev => prev.map(vt =>
-                vt.id === mountableVThread.id ? { ...vt, state: "UNMOUNTED", carrierId: null } : vt
+                vt.id === mountableVThread.id ? { ...vt, state: "RUNNABLE" } : vt
+              ));
+            }, IO_BLOCK_DURATION);
+
+          } else {
+            // CPU task or finishing I/O task
+            const duration = wasRunnable ? 1500 : CPU_TASK_DURATION;
+            setTimeout(() => {
+              setVirtualThreads(prev => prev.map(vt =>
+                vt.id === mountableVThread.id ? { ...vt, state: "DONE" } : vt
               ));
               setCarrierThreads(prev => prev.map(ct =>
-                ct.id === availableCarrier.id ? { ...ct, mountedVirtualThreadId: null } : ct
+                ct.id === currentCarrierId ? { ...ct, mountedVirtualThreadId: null } : ct
               ));
-
-              setTimeout(() => {
-                const runnableLegend = `Tarea I/O ${mountableVThread.task.id} completada. Thread listo para re-montar.`;
-                setVirtualLegends(prev => [...prev, runnableLegend]);
-                setTimeout(() => setVirtualLegends(prev => prev.filter(l => l !== runnableLegend)), LEGEND_DURATION);
-                setVirtualThreads(prev => prev.map(vt =>
-                  vt.id === mountableVThread.id ? { ...vt, state: "RUNNABLE" } : vt
-                ));
-                setProcessingVirtualThreadId(null); // Done processing this thread
-              }, IO_BLOCK_DURATION);
-
-            } else {
-              // CPU task or finishing I/O task
-              const duration = wasRunnable ? 1500 : CPU_TASK_DURATION;
-              setTimeout(() => {
-                setVirtualThreads(prev => prev.map(vt =>
-                  vt.id === mountableVThread.id ? { ...vt, state: "DONE" } : vt
-                ));
-                setCarrierThreads(prev => prev.map(ct =>
-                  ct.id === availableCarrier.id ? { ...ct, mountedVirtualThreadId: null } : ct
-                ));
-                setProcessingVirtualThreadId(null); // Done processing this thread
-              }, duration);
-            }
-          }, VIRTUAL_THREAD_MOUNT_DELAY);
-        }
+            }, duration);
+          }
+        }, VIRTUAL_THREAD_MOUNT_DELAY, availableCarrier.id);
       }
     }
-  }, [tasks, virtualThreads, carrierThreads, mode, processingVirtualThreadId, nextVirtualThreadId.current]);
+  }, [tasks, virtualThreads, carrierThreads, mode, nextVirtualThreadId.current]);
 
   useEffect(() => {
     const doneThreads = platformThreads.filter(pt => pt.state === 'DONE');
