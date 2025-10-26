@@ -26,6 +26,7 @@ interface BlockingWorker {
 export const ThreadPoolSimulator = () => {
   const [mode, setMode] = useState<"threadpool" | "forkjoin">("threadpool");
   const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [statusText, setStatusText] = useState("");
   const [sharedQueue, setSharedQueue] = useState<Task[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([
@@ -45,6 +46,18 @@ export const ThreadPoolSimulator = () => {
   ]);
   const [showDeadlockWarning, setShowDeadlockWarning] = useState(false);
   const [blockingStatusText, setBlockingStatusText] = useState("");
+
+  // Pause helper function
+  const waitOrPause = async (ms: number) => {
+    const startTime = Date.now();
+    while (Date.now() - startTime < ms) {
+      if (isPaused) {
+        await new Promise((r) => setTimeout(r, 100));
+      } else {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    }
+  };
 
   const createTask = (id: string, type: TaskType): Task => ({
     id,
@@ -86,6 +99,7 @@ export const ThreadPoolSimulator = () => {
 
   const startThreadPoolAnimation = async () => {
     setIsRunning(true);
+    setIsPaused(false);
     resetThreadPool();
 
     // Initialize shared queue with tasks
@@ -100,7 +114,7 @@ export const ThreadPoolSimulator = () => {
     setSharedQueue(tasks);
     setStatusText("Cola compartida creada con 6 tareas (FIFO)");
 
-    await new Promise((r) => setTimeout(r, 2000));
+    await waitOrPause(2000);
 
     // Worker 1 takes T1 (CPU)
     setStatusText("Worker 1 toma T1 (CPU) de la cola compartida");
@@ -113,7 +127,7 @@ export const ThreadPoolSimulator = () => {
       )
     );
 
-    await new Promise((r) => setTimeout(r, 2000));
+    await waitOrPause(2000);
 
     // Worker 2 takes T2 (I/O) and blocks
     setStatusText("Worker 2 toma T2 (I/O) - SE BLOQUEA esperando respuesta");
@@ -126,7 +140,7 @@ export const ThreadPoolSimulator = () => {
       )
     );
 
-    await new Promise((r) => setTimeout(r, 2000));
+    await waitOrPause(2000);
 
     // Worker 3 takes T3 (CPU)
     setStatusText("Worker 3 toma T3 (CPU) mientras Worker 2 sigue bloqueado");
@@ -139,7 +153,7 @@ export const ThreadPoolSimulator = () => {
       )
     );
 
-    await new Promise((r) => setTimeout(r, 2500));
+    await waitOrPause(2500);
 
     // Worker 1 finishes and takes T4
     setStatusText("Worker 1 termina T1 y toma T4 (CPU) de la cola");
@@ -152,7 +166,7 @@ export const ThreadPoolSimulator = () => {
       )
     );
 
-    await new Promise((r) => setTimeout(r, 2500));
+    await waitOrPause(2500);
 
     // Worker 2 unblocks
     setStatusText("Worker 2 recibe respuesta I/O y termina T2");
@@ -160,7 +174,7 @@ export const ThreadPoolSimulator = () => {
       prev.map((w) => (w.id === 2 ? { ...w, status: "idle", currentTask: null } : w))
     );
 
-    await new Promise((r) => setTimeout(r, 1500));
+    await waitOrPause(1500);
 
     // Worker 2 takes T5 (I/O)
     setStatusText("Worker 2 toma T5 (I/O) - SE BLOQUEA nuevamente");
@@ -173,7 +187,7 @@ export const ThreadPoolSimulator = () => {
       )
     );
 
-    await new Promise((r) => setTimeout(r, 2500));
+    await waitOrPause(2500);
 
     // Worker 3 finishes and takes T6
     setStatusText("Worker 3 termina T3 y toma T6 (CPU)");
@@ -186,15 +200,17 @@ export const ThreadPoolSimulator = () => {
       )
     );
 
-    await new Promise((r) => setTimeout(r, 2500));
+    await waitOrPause(2500);
 
     setStatusText("Animación completada - El pool maneja bien tareas I/O bloqueantes");
     setWorkers((prev) => prev.map((w) => ({ ...w, status: "idle", currentTask: null })));
     setIsRunning(false);
+    setIsPaused(false);
   };
 
   const startForkJoinAnimation = async () => {
     setIsRunning(true);
+    setIsPaused(false);
     resetForkJoinPool();
 
     // Initialize worker queues (newest-first for LIFO rendering)
@@ -219,7 +235,7 @@ export const ThreadPoolSimulator = () => {
     ]);
     setStatusText("1. Produciendo 10 tareas CPU-Bound. A (4), B (4), C (2).");
 
-    await new Promise((r) => setTimeout(r, 2500));
+    await waitOrPause(2500);
 
     // Step 2: Process LIFO (A4, B4, C2)
     setStatusText("2. Todos los Workers procesan sus tareas más recientes (LIFO): A4, B4, C2.");
@@ -238,11 +254,11 @@ export const ThreadPoolSimulator = () => {
       })
     );
 
-    await new Promise((r) => setTimeout(r, 2000));
+    await waitOrPause(2000);
 
     // Clear current tasks
     setFjpWorkers((prev) => prev.map((w) => ({ ...w, currentTask: null })));
-    await new Promise((r) => setTimeout(r, 500));
+    await waitOrPause(500);
 
     // Step 3: Process LIFO again (A3, B3, C1)
     setStatusText("3. Procesando LIFO de nuevo: A3, B3, C1. Worker C quedará ocioso.");
@@ -261,14 +277,14 @@ export const ThreadPoolSimulator = () => {
       })
     );
 
-    await new Promise((r) => setTimeout(r, 2000));
+    await waitOrPause(2000);
 
     // Worker C becomes idle
     setFjpWorkers((prev) =>
       prev.map((w) => (w.id === 3 ? { ...w, status: "idle", currentTask: null } : w))
     );
 
-    await new Promise((r) => setTimeout(r, 2500));
+    await waitOrPause(2500);
 
     // Step 4: Worker C steals from A, A and B process LIFO
     setStatusText("4. Worker C (ocioso) busca trabajo. A y B procesan LIFO (A2, B2).");
@@ -310,7 +326,7 @@ export const ThreadPoolSimulator = () => {
       return newWorkers;
     });
 
-    await new Promise((r) => setTimeout(r, 2500));
+    await waitOrPause(2500);
 
     // Continúa el procesamiento sin limpiar tareas para mantener la robada en C
 
@@ -348,21 +364,23 @@ export const ThreadPoolSimulator = () => {
       return newWorkers;
     });
 
-    await new Promise((r) => setTimeout(r, 2500));
+    await waitOrPause(2500);
 
     // Step 6: Worker A processes B1
     setStatusText("6. Worker A procesa B1 (robada). Todas las colas están vacías.");
-    await new Promise((r) => setTimeout(r, 2000));
+    await waitOrPause(2000);
 
     setStatusText("✅ Animación completada. Se demostró LIFO (local) y FIFO (robo).");
     setFjpWorkers((prev) =>
       prev.map((w) => ({ ...w, status: "idle", currentTask: null, queue: [] }))
     );
     setIsRunning(false);
+    setIsPaused(false);
   };
 
   const startBlockingAnimation = async () => {
     setIsRunning(true);
+    setIsPaused(false);
     resetBlockingAnimation();
 
     // Create all blocking tasks
@@ -407,7 +425,7 @@ export const ThreadPoolSimulator = () => {
     ]);
     setBlockingStatusText(`1. Tareas CPU e I/O entran al Pool (3 Workers). Total: ${blockingTasks.length} tareas.`);
 
-    await new Promise((r) => setTimeout(r, 2500));
+    await waitOrPause(2500);
 
     // Step 2: Process 6 CPU tasks (A7, A6, B7, B6, C7, C6)
     setBlockingStatusText("2. Los Workers ejecutan sus tareas más recientes (LIFO): A7, A6, B7, B6, C7, C6 (6 tareas CPU completadas).");
@@ -420,10 +438,10 @@ export const ThreadPoolSimulator = () => {
           queue: w.queue.slice(0, -1),
         }))
       );
-      await new Promise((r) => setTimeout(r, 700));
+      await waitOrPause(700);
     }
 
-    await new Promise((r) => setTimeout(r, 1500));
+    await waitOrPause(1500);
 
     // Step 3: All workers hit I/O tasks and block
     setBlockingStatusText("3. Los 3 Workers golpean la siguiente tarea LIFO, que es I/O. ¡El Pool se BLOQUEA!");
@@ -437,13 +455,13 @@ export const ThreadPoolSimulator = () => {
       }))
     );
 
-    await new Promise((r) => setTimeout(r, 2500));
+    await waitOrPause(2500);
 
     // Step 4: Show deadlock warning
     setBlockingStatusText("4. DEADLOCK: Los 3 Workers están paralizados. Las 12 tareas CPU restantes (A1-A4, B1-B4, C1-C4) están esperando.");
     setShowDeadlockWarning(true);
 
-    await new Promise((r) => setTimeout(r, 4000));
+    await waitOrPause(4000);
 
     // Step 5: I/O completes
     setBlockingStatusText("5. Simulación: Las tareas I/O finalmente terminan. El Pool se desbloquea.");
@@ -460,7 +478,7 @@ export const ThreadPoolSimulator = () => {
       })
     );
 
-    await new Promise((r) => setTimeout(r, 2500));
+    await waitOrPause(2500);
 
     // Step 6: Process remaining tasks quickly
     setBlockingStatusText("6. El Pool procesa las 12 tareas CPU restantes (A4, A3, A2, A1, etc.) en modo LIFO.");
@@ -484,7 +502,7 @@ export const ThreadPoolSimulator = () => {
           });
           return updated;
         });
-        if (any) await new Promise((r) => setTimeout(r, 500));
+        if (any) await waitOrPause(500);
       }
     };
 
@@ -492,6 +510,7 @@ export const ThreadPoolSimulator = () => {
 
     setBlockingStatusText("✅ Animación completada. El bloqueo I/O paralizó el pool completo, dejando muchas tareas CPU esperando.");
     setIsRunning(false);
+    setIsPaused(false);
   };
 
   const handleToggle = () => {
@@ -607,7 +626,7 @@ export const ThreadPoolSimulator = () => {
                       {sharedQueue.map((task) => (
                         <div
                           key={task.id}
-                          className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 ${
+                          className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 transition-all duration-300 ${
                             task.type === "cpu"
                               ? "bg-gradient-to-br from-blue-500 to-blue-700"
                               : "bg-gradient-to-br from-purple-500 to-purple-700"
@@ -631,6 +650,14 @@ export const ThreadPoolSimulator = () => {
                     className="bg-orange-500 hover:bg-orange-600 text-background font-mono"
                   >
                     ▶ Iniciar Animación
+                  </Button>
+                  <Button
+                    onClick={() => setIsPaused(!isPaused)}
+                    disabled={!isRunning}
+                    variant="outline"
+                    className="border-orange-500 text-orange-500 hover:bg-orange-500/10 font-mono"
+                  >
+                    {isPaused ? "▶ Continuar" : "⏸ Pausar"}
                   </Button>
                   <Button
                     onClick={resetThreadPool}
@@ -779,6 +806,14 @@ export const ThreadPoolSimulator = () => {
                     ▶ Iniciar Animación
                   </Button>
                   <Button
+                    onClick={() => setIsPaused(!isPaused)}
+                    disabled={!isRunning}
+                    variant="outline"
+                    className="border-green-500 text-green-500 hover:bg-green-500/10 font-mono"
+                  >
+                    {isPaused ? "▶ Continuar" : "⏸ Pausar"}
+                  </Button>
+                  <Button
                     onClick={resetForkJoinPool}
                     variant="outline"
                     className="border-green-500 text-green-500 hover:bg-green-500/10 font-mono"
@@ -830,23 +865,23 @@ export const ThreadPoolSimulator = () => {
                       <span className="absolute -top-3 left-4 bg-card px-2 text-xs text-muted-foreground font-bold z-10">
                         LIFO (Newest) ← Cola → FIFO (Oldest)
                       </span>
-                      <div className="min-h-20 bg-background border-2 border-dashed border-border rounded p-3 flex items-center overflow-x-auto">
+                     <div className="min-h-20 bg-background border-2 border-dashed border-border rounded p-3 flex items-center overflow-x-auto">
                         <div className="flex gap-2 flex-row-reverse w-full">
+                          {worker.currentTask && (
+                            <div className="w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 bg-gradient-to-br from-green-500 to-green-700 animate-pulse scale-110 transition-all duration-300">
+                              <span>{worker.currentTask.id}</span>
+                              <span className="text-[10px]">CPU</span>
+                            </div>
+                          )}
                           {worker.queue?.map((task) => (
                             <div
                               key={task.id}
-                              className="w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700"
+                              className="w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700 transition-all duration-300"
                             >
                               <span>{task.id}</span>
                               <span className="text-[10px]">CPU</span>
                             </div>
                           ))}
-                          {worker.currentTask && (
-                            <div className="w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 bg-gradient-to-br from-green-500 to-green-700 animate-pulse scale-110">
-                              <span>{worker.currentTask.id}</span>
-                              <span className="text-[10px]">CPU</span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -918,6 +953,14 @@ export const ThreadPoolSimulator = () => {
                       ▶ Ver Antipatrón en Acción
                     </Button>
                     <Button
+                      onClick={() => setIsPaused(!isPaused)}
+                      disabled={!isRunning}
+                      variant="outline"
+                      className="border-red-500 text-red-500 hover:bg-red-500/10 font-mono"
+                    >
+                      {isPaused ? "▶ Continuar" : "⏸ Pausar"}
+                    </Button>
+                    <Button
                       onClick={resetBlockingAnimation}
                       variant="outline"
                       className="border-green-500 text-green-500 hover:bg-green-500/10 font-mono"
@@ -967,12 +1010,12 @@ export const ThreadPoolSimulator = () => {
                         <span className="absolute -top-3 left-4 bg-card px-2 text-xs text-muted-foreground font-bold z-10">
                           LIFO (Newest) ← Cola → FIFO (Oldest)
                         </span>
-                        <div className="min-h-20 bg-background border-2 border-dashed border-border rounded p-3 flex items-center overflow-x-auto">
+                         <div className="min-h-20 bg-background border-2 border-dashed border-border rounded p-3 flex items-center overflow-x-auto">
                           <div className="flex gap-2 flex-row-reverse w-full">
                             {worker.queue.map((task) => (
                               <div
                                 key={task.id}
-                                className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 ${
+                                className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white text-xs font-bold font-mono shadow-lg flex-shrink-0 transition-all duration-300 ${
                                   task.state === "blocked"
                                     ? "bg-gradient-to-br from-red-500 to-red-700 animate-pulse"
                                     : task.type === "cpu"
