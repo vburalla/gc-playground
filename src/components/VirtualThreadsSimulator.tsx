@@ -46,12 +46,12 @@ interface CarrierThread {
   mountedVirtualThreadId: number | null;
 }
 
-const MAX_OS_THREADS = 4;
+const MAX_OS_THREADS = 2;
 const MAX_CARRIER_THREADS = 2;
-const IO_BLOCK_DURATION = 5000;
-const CPU_TASK_DURATION = 3000;
-const VIRTUAL_THREAD_MOUNT_DELAY = 2000;
-const LEGEND_DURATION = 3000;
+const IO_BLOCK_DURATION = 6000;
+const CPU_TASK_DURATION = 4000;
+const VIRTUAL_THREAD_MOUNT_DELAY = 3000;
+const LEGEND_DURATION = 4000;
 
 const Legend = ({ text }: { text: string }) => (
     <motion.div
@@ -173,9 +173,14 @@ const OSThreadComponent = ({ osThread, isCarrier = false }: { osThread: OSThread
     </motion.div>
 );
 
-const ConnectingLine = ({ visible }: { visible: boolean }) => (
+const ConnectingLine = ({ visible, vertical = false }: { visible: boolean, vertical?: boolean }) => (
     <AnimatePresence>
-        {visible && <motion.div initial={{scaleX: 0}} animate={{scaleX: 1, transition: {duration: 1.0, delay: 0.5}}} exit={{scaleX: 0}} className="h-0.5 w-full bg-primary/70 origin-left" />}
+        {visible && (
+            vertical ? 
+                <motion.div initial={{scaleY: 0}} animate={{scaleY: 1, transition: {duration: 1.0, delay: 0.5}}} exit={{scaleY: 0}} className="w-0.5 h-12 bg-primary/70 origin-top" />
+                :
+                <motion.div initial={{scaleX: 0}} animate={{scaleX: 1, transition: {duration: 1.0, delay: 0.5}}} exit={{scaleX: 0}} className="h-0.5 w-full bg-primary/70 origin-left" />
+        )}
     </AnimatePresence>
 )
 
@@ -292,9 +297,9 @@ export const VirtualThreadsSimulator = () => {
                             setPlatformThreads(prev => prev.map(pt => pt.id === newPThreadId ? { ...pt, state: "DONE" } : pt));
                             setOsThreads(prev => prev.map(ot => ot.id === availableOSThread.id ? { ...ot, platformThreadId: null, isBlocked: false } : ot));
                         }, duration);
-                    }, 1500);
-                }, 1500);
-            }, 1000);
+                    }, 2000);
+                }, 2000);
+            }, 1500);
         }
     }
   }, [tasks, mode, nextPlatformThreadId.current]);
@@ -363,7 +368,7 @@ export const VirtualThreadsSimulator = () => {
 
           } else {
             // CPU task or finishing I/O task
-            const duration = wasRunnable ? 1500 : CPU_TASK_DURATION;
+            const duration = wasRunnable ? 2000 : CPU_TASK_DURATION;
             setTimeout(() => {
               setVirtualThreads(prev => prev.map(vt =>
                 vt.id === mountableVThread.id ? { ...vt, state: "DONE" } : vt
@@ -484,6 +489,19 @@ export const VirtualThreadsSimulator = () => {
                              {virtualThreads.filter(vt => vt.state === 'UNMOUNTED' || vt.state === 'RUNNABLE').length === 0 && <p className="text-xs text-muted-foreground text-center pt-2">Heap is empty.</p>}
                         </div>
                     </div>
+                    <div className="pt-4">
+                        <h3 className="text-center text-sm font-semibold mb-4">Platform Threads (Carrier Threads)</h3>
+                        <div className="flex justify-center gap-8">
+                            {carrierThreads.map(carrierThread => {
+                                const virtualThread = virtualThreads.find(vt => vt.carrierId === carrierThread.id);
+                                return (
+                                    <div key={carrierThread.id} className="flex justify-center">
+                                        <CarrierThreadComponent thread={carrierThread} virtualThread={virtualThread} />
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/30 relative">
@@ -491,41 +509,17 @@ export const VirtualThreadsSimulator = () => {
                         <CardTitle>Operating System</CardTitle>
                     </CardHeader>
                     <VirtualLegendDisplay legends={virtualLegends} />
-                    <CardContent className="min-h-[250px] pt-8 grid grid-cols-2 gap-4">
-                        <div className="space-y-4">
-                            {carrierThreads.filter((_, i) => i % 2 === 0).map(carrierThread => {
-                                const osThread = carrierOsThreads.find(cot => cot.id === carrierThread.osThreadId);
-                                const virtualThread = virtualThreads.find(vt => vt.carrierId === carrierThread.id);
+                    <CardContent className="min-h-[250px] pt-8">
+                        <h3 className="text-center text-sm font-semibold mb-4">OS Threads (1:1 mapping with Platform Threads)</h3>
+                        <div className="flex justify-center gap-8">
+                            {carrierOsThreads.map((osThread, index) => {
+                                const carrierThread = carrierThreads[index];
                                 return (
-                                    <div key={carrierThread.id} className="w-full flex items-center justify-center gap-4 h-24">
+                                    <div key={osThread.id} className="flex flex-col items-center gap-0">
+                                        <ConnectingLine visible={true} vertical={true} />
                                         <div className="w-40 flex justify-center">
-                                            <CarrierThreadComponent thread={carrierThread} virtualThread={virtualThread} />
+                                            <OSThreadComponent osThread={osThread} isCarrier={true} />
                                         </div>
-                                        <div className="w-32 flex flex-col items-center justify-center gap-1">
-                                            <ConnectingLine visible={true} />
-                                        </div>
-                                        {osThread && <div className="w-40 flex justify-center">
-                                            <OSThreadComponent osThread={osThread} />
-                                        </div>}
-                                    </div>
-                                )
-                            })}
-                        </div>
-                        <div className="space-y-4">
-                            {carrierThreads.filter((_, i) => i % 2 !== 0).map(carrierThread => {
-                                const osThread = carrierOsThreads.find(cot => cot.id === carrierThread.osThreadId);
-                                const virtualThread = virtualThreads.find(vt => vt.carrierId === carrierThread.id);
-                                return (
-                                    <div key={carrierThread.id} className="w-full flex items-center justify-center gap-4 h-24">
-                                        <div className="w-40 flex justify-center">
-                                            <CarrierThreadComponent thread={carrierThread} virtualThread={virtualThread} />
-                                        </div>
-                                        <div className="w-32 flex flex-col items-center justify-center gap-1">
-                                            <ConnectingLine visible={true} />
-                                        </div>
-                                        {osThread && <div className="w-40 flex justify-center">
-                                            <OSThreadComponent osThread={osThread} />
-                                        </div>}
                                     </div>
                                 )
                             })}
