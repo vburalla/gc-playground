@@ -48,10 +48,10 @@ interface CarrierThread {
 
 const MAX_OS_THREADS = 2;
 const MAX_CARRIER_THREADS = 2;
-const IO_BLOCK_DURATION = 6000;
+const IO_BLOCK_DURATION = 10000;
 const CPU_TASK_DURATION = 4000;
-const VIRTUAL_THREAD_MOUNT_DELAY = 3000;
-const LEGEND_DURATION = 4000;
+const VIRTUAL_THREAD_MOUNT_DELAY = 5000;
+const LEGEND_DURATION = 8000;
 
 const Legend = ({ text }: { text: string }) => (
     <motion.div
@@ -101,13 +101,12 @@ const ThreadStack = ({ show, size }: { show: boolean, size: string }) => (
 
 const PlatformThreadComponent = ({ thread }: { thread: PlatformThread }) => (
   <motion.div
-    layoutId={`platform-thread-${thread.id}`}
-    initial={{ opacity: 0, scale: 0.8 }}
-    animate={{ opacity: 1, scale: 1 }}
-    exit={{ opacity: 0, scale: 0.8, transition: { duration: 1.0 } }}
-    className="relative w-36 h-48 bg-card border rounded-lg p-2 flex flex-col items-center shadow-md"
-  >
-    <AnimatePresence>
+      layoutId={`platform-thread-${thread.id}`}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8, transition: { duration: 1.0 } }}
+      className="relative w-48 h-48 bg-card border rounded-lg p-2 flex flex-col items-center shadow-md"
+  >    <AnimatePresence>
         {thread.state === "CREATING" && <Legend text="Creando Thread..." />}
     </AnimatePresence>
     <Badge variant="secondary" className="text-[10px]">Platform Thread {thread.id}</Badge>
@@ -133,13 +132,13 @@ const CarrierThreadComponent = ({ thread, virtualThread }: { thread: CarrierThre
     return (
         <motion.div
             layout
-            className="relative w-36 h-48 bg-card border rounded-lg p-2 flex flex-col items-center shadow-md"
+            className="relative w-48 h-48 bg-card border rounded-lg p-2 flex flex-col items-center shadow-md"
         >
             <Badge variant="secondary" className="text-[10px]">{label} {thread.id}</Badge>
             <div className="w-full h-full mt-1 flex flex-col items-center justify-center overflow-y-auto p-1 bg-background/50 rounded">
                 <AnimatePresence>
                     {virtualThread && (
-                        <motion.div layoutId={`vthread-anim-${virtualThread.id}`}>
+                        <motion.div layoutId={`vthread-anim-${virtualThread.id}`} transition={{ type: "spring", stiffness: 300, damping: 30 }}>
                             <VirtualThreadComponent vThread={virtualThread} />
                         </motion.div>
                     )}
@@ -155,7 +154,7 @@ const OSThreadComponent = ({ osThread, isCarrier = false }: { osThread: OSThread
         borderColor: (osThread as OSThread).isBlocked ? "hsl(0, 72%, 51%)" : "hsl(var(--primary))",
         backgroundColor: (osThread as OSThread).isBlocked ? "hsla(0, 72%, 51%, 0.1)" : "hsla(var(--muted))"
     }} transition={{ duration: 1.0 }}
-        className={`relative w-36 h-48 border-2 border-dashed rounded-lg p-2 flex flex-col items-center justify-center shadow-inner bg-muted/30`}>
+        className={`relative w-48 h-48 border-2 border-dashed rounded-lg p-2 flex flex-col items-center justify-center shadow-inner bg-muted/30`}>
         <Badge variant="outline" className="text-[10px]">{isCarrier ? 'Carrier' : 'OS'} Thread {osThread.id}</Badge>
         <AnimatePresence>
         {(osThread as OSThread).isBlocked && (
@@ -202,17 +201,21 @@ const VirtualThreadComponent = ({ vThread }: { vThread: VirtualThread }) => {
 
     return (
     <motion.div
-        className={`w-32 h-16 border rounded-md p-1 flex flex-col justify-center items-center text-center shadow-sm ${stateConfig[vThread.state]}`}>
+        className={`w-36 h-24 border rounded-md p-1 flex flex-col justify-center items-center text-center shadow-sm ${stateConfig[vThread.state]}`}>
         <p className="text-[10px] font-bold">Virtual Thread {vThread.id}</p>
         <p className="text-[9px]">Task {vThread.task.id} ({vThread.task.type})</p>
         <p className="text-[9px] font-semibold">{stateName[vThread.state]}</p>
+        <div className="flex items-center justify-center mt-1 h-4">
+            {vThread.state === 'MOUNTED' && <Clock size={16} className="animate-spin text-green-800" />}
+            {vThread.state === 'UNMOUNTED' && <Database size={16} className="text-amber-800" />}
+        </div>
     </motion.div>
     );
 }
 
 const PlatformSimulationRow = ({ osThread, platformThread }: { osThread: OSThread, platformThread: PlatformThread | undefined }) => (
     <div className="w-full flex items-center justify-center gap-4 my-8 h-52">
-        <div className="w-40 flex justify-center">
+        <div className="w-52 flex justify-center">
             <AnimatePresence>
                 {platformThread && platformThread.state !== 'DONE' && <PlatformThreadComponent thread={platformThread} />}
             </AnimatePresence>
@@ -224,7 +227,7 @@ const PlatformSimulationRow = ({ osThread, platformThread }: { osThread: OSThrea
             </AnimatePresence>
             <ConnectingLine visible={!!platformThread && platformThread.state !== 'CREATING' && platformThread.state !== 'DONE'} />
         </div>
-        <div className="w-40 flex justify-center">
+        <div className="w-52 flex justify-center">
             <OSThreadComponent osThread={osThread} />
         </div>
     </div>
@@ -234,6 +237,15 @@ export const VirtualThreadsSimulator = () => {
   const [mode, setMode] = useState<ThreadType>("PLATFORM");
   const [tasks, setTasks] = useState<Task[]>([]);
   const nextTaskId = useRef(1);
+  const timeoutsRef = useRef<Set<NodeJS.Timeout>>(new Set());
+
+  const runTimeout = useCallback((callback: () => void, delay: number) => {
+    const timeoutId = setTimeout(() => {
+        callback();
+        timeoutsRef.current.delete(timeoutId);
+    }, delay);
+    timeoutsRef.current.add(timeoutId);
+  }, []);
 
   // Platform state
   const [platformThreads, setPlatformThreads] = useState<PlatformThread[]>([]);
@@ -252,6 +264,9 @@ export const VirtualThreadsSimulator = () => {
   const nextVirtualThreadId = useRef(1);
 
   const resetSimulation = () => {
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current.clear();
+
     setTasks([]);
     setPlatformThreads([]);
     setOsThreads(Array.from({ length: MAX_OS_THREADS }, (_, i) => ({ id: i + 1, platformThreadId: null, isBlocked: false })));
@@ -297,9 +312,9 @@ export const VirtualThreadsSimulator = () => {
                             setPlatformThreads(prev => prev.map(pt => pt.id === newPThreadId ? { ...pt, state: "DONE" } : pt));
                             setOsThreads(prev => prev.map(ot => ot.id === availableOSThread.id ? { ...ot, platformThreadId: null, isBlocked: false } : ot));
                         }, duration);
-                    }, 2000);
-                }, 2000);
-            }, 1500);
+                    }, 4000);
+                }, 4000);
+            }, 3000);
         }
     }
   }, [tasks, mode, nextPlatformThreadId.current]);
@@ -320,9 +335,7 @@ export const VirtualThreadsSimulator = () => {
 
       // 2. Mount virtual threads to carrier threads
       const mountableVThread = virtualThreads.find(vt =>
-        (vt.state === "NEW" || vt.state === "RUNNABLE") && vt.carrierId === null && vt.task.type === "CPU"
-      ) || virtualThreads.find(vt =>
-        (vt.state === "NEW" || vt.state === "RUNNABLE") && vt.carrierId === null && vt.task.type === "IO"
+        (vt.state === "NEW" || vt.state === "RUNNABLE") && vt.carrierId === null
       );
       const availableCarrier = carrierThreads.find(ct => ct.mountedVirtualThreadId === null);
 
@@ -468,7 +481,7 @@ export const VirtualThreadsSimulator = () => {
                         <div className="flex flex-wrap gap-2 justify-center min-h-[80px] bg-muted/30 rounded-lg p-2">
                             <AnimatePresence>
                                 {virtualThreads.filter(vt => vt.state === 'NEW').map(vt => (
-                                    <motion.div layoutId={`vthread-anim-${vt.id}`} key={vt.id}>
+                                    <motion.div layoutId={`vthread-anim-${vt.id}`} key={vt.id} transition={{ type: "spring", stiffness: 300, damping: 30 }}>
                                         <VirtualThreadComponent vThread={vt} />
                                     </motion.div>
                                 ))}
@@ -481,7 +494,7 @@ export const VirtualThreadsSimulator = () => {
                          <div className="flex flex-wrap gap-2 justify-center min-h-[80px] bg-muted/30 rounded-lg p-2">
                             <AnimatePresence>
                                 {virtualThreads.filter(vt => vt.state === 'UNMOUNTED' || vt.state === 'RUNNABLE').map(vt => (
-                                    <motion.div layoutId={`vthread-anim-${vt.id}`} key={vt.id}>
+                                    <motion.div layoutId={`vthread-anim-${vt.id}`} key={vt.id} transition={{ type: "spring", stiffness: 300, damping: 30 }}>
                                         <VirtualThreadComponent vThread={vt} />
                                     </motion.div>
                                 ))}
