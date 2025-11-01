@@ -12,14 +12,14 @@ export const Navigation = () => {
   return (
     <header className="w-full bg-gradient-bg border-b border-border/50 shadow-lg backdrop-blur-sm">
       <div className="w-full px-4 py-4">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="text-left">
             <h1 className="text-2xl font-bold text-foreground bg-gradient-to-r from-primary to-ring bg-clip-text text-transparent">
               Java Virtual Machine Explorer
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Garbage Collection & JVM Memory Simulation</p>
           </div>
-          <nav className="flex gap-2 flex-wrap">
+          <nav className="flex gap-2 flex-wrap md:justify-end">
             <Button asChild size="sm">
               <NavLink 
                 to="/pc-register" 
@@ -70,7 +70,7 @@ export const Navigation = () => {
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuContent align="start" className="w-48 z-50">
                 <DropdownMenuItem asChild>
                   <NavLink to="/non-moving" className="cursor-pointer">
                     Non-Moving GC
